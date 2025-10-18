@@ -1,3 +1,8 @@
-PyQt6>=6.5.0
-ffmpeg-python>=0.2.0
+# Core dependencies
 requests>=2.31.0
+
+# Optional: For advanced GUI features (not currently used)
+# PyQt6>=6.5.0
+
+# Note: tkinter is included with Python standard library
+# Note: FFmpeg is downloaded automatically by the application

@@ -5,18 +5,27 @@ Um conversor de vídeo simples e eficiente com interface gráfica, desenvolvido 
 ## 🚀 Características
 
 - **Interface Gráfica Intuitiva**: Interface moderna e fácil de usar desenvolvida com Tkinter
+- **Aceleração por Hardware CUDA**: Suporte completo para NVENC (NVIDIA) com fallback automático para CPU
+- **Detecção Automática de Hardware**: Identifica automaticamente GPUs NVIDIA compatíveis
 - **Múltiplos Formatos**: Suporte para conversão entre diversos formatos de vídeo
 - **Instalação Automática do FFmpeg**: Detecta e instala automaticamente o FFmpeg se necessário
 - **Configurações Avançadas**: Controle de qualidade, FPS, resolução e transparência
 - **Barra de Progresso**: Acompanhamento em tempo real do progresso da conversão
 - **Validação de Entrada**: Verificação automática de arquivos e configurações
 - **Log Detalhado**: Sistema de log para acompanhar o processo de conversão
+- **Fallback Inteligente**: Automaticamente usa CPU se CUDA não estiver disponível
 
 ## 📋 Requisitos
 
+### Requisitos Mínimos
 - Python 3.7 ou superior
 - Windows 10/11 (testado)
 - Conexão com internet (para instalação automática do FFmpeg)
+
+### Para Aceleração CUDA (Opcional)
+- GPU NVIDIA compatível com CUDA
+- Drivers NVIDIA atualizados
+- CUDA Toolkit (instalado automaticamente com drivers modernos)
 
 ## 🛠️ Instalação
 
@@ -38,9 +47,12 @@ Um conversor de vídeo simples e eficiente com interface gráfica, desenvolvido 
 
 ## 📦 Dependências
 
-- `PyQt6>=6.5.0` - Interface gráfica (fallback)
-- `ffmpeg-python>=0.2.0` - Wrapper Python para FFmpeg
 - `requests>=2.31.0` - Requisições HTTP para download do FFmpeg
+- `tkinter` - Interface gráfica (incluído no Python padrão)
+- `subprocess` - Execução de processos FFmpeg (biblioteca padrão)
+- `threading` - Processamento assíncrono (biblioteca padrão)
+
+**Nota**: FFmpeg é baixado automaticamente pela aplicação
 
 ## 🎯 Como Usar
 
@@ -96,15 +108,18 @@ Escolha entre os formatos disponíveis:
 vidconv/
 ├── core/                   # Módulos principais
 │   ├── ffmpeg_installer.py # Instalação automática do FFmpeg
-│   └── video_converter.py  # Motor de conversão de vídeo
+│   └── video_converter.py  # Motor de conversão com suporte CUDA
 ├── gui/                    # Interface gráfica
 │   ├── main_window.py      # Interface PyQt6 (legacy)
 │   └── main_window_tkinter.py # Interface Tkinter (atual)
 ├── utils/                  # Utilitários
 │   ├── config.py          # Configurações centralizadas
+│   ├── hardware_detector.py # Detecção de hardware CUDA
 │   └── validators.py      # Validação de entrada
-├── main_tkinter.py        # Arquivo principal da aplicação
+├── main.py                # Arquivo principal (PyQt6)
+├── main_tkinter.py        # Arquivo principal da aplicação (Tkinter)
 ├── requirements.txt       # Dependências Python
+├── .gitignore            # Arquivos ignorados pelo Git
 └── README.md             # Este arquivo
 ```
 
@@ -145,6 +160,31 @@ python test_complete.py
 - **1440p**: 2560x1440
 - **4K**: 3840x2160
 
+## 🚀 Aceleração CUDA/NVENC
+
+### Detecção Automática
+A aplicação detecta automaticamente se você possui:
+- GPU NVIDIA compatível
+- Drivers atualizados
+- Suporte CUDA disponível
+
+### Codecs NVENC Suportados
+- **H.264 (AVC)**: `h264_nvenc` - Melhor compatibilidade
+- **H.265 (HEVC)**: `hevc_nvenc` - Melhor compressão
+- **AV1**: `av1_nvenc` - Codec mais moderno (GPUs mais recentes)
+
+### Benefícios da Aceleração
+- **Velocidade**: Até 10x mais rápido que CPU
+- **Eficiência**: Menor uso de CPU durante conversão
+- **Qualidade**: Mantém qualidade com processamento otimizado
+- **Fallback**: Automaticamente usa CPU se CUDA falhar
+
+### Verificação de Suporte
+Execute para verificar se CUDA está disponível:
+```bash
+python debug_hardware.py
+```
+
 ## 🐛 Solução de Problemas
 
 ### FFmpeg não encontrado
@@ -162,15 +202,30 @@ A aplicação tentará instalar automaticamente o FFmpeg. Se falhar:
 - Verifique se todas as dependências estão instaladas
 - Execute `python test_complete.py` para diagnosticar problemas
 
+### CUDA não funciona
+- Verifique se você tem uma GPU NVIDIA
+- Atualize os drivers NVIDIA para a versão mais recente
+- Execute `python debug_hardware.py` para verificar detecção
+- A aplicação usará CPU automaticamente se CUDA falhar
+
+### Conversão lenta
+- Se você tem GPU NVIDIA, verifique se CUDA está sendo usado
+- Monitore o log para ver se está usando `nvenc` ou CPU
+- Considere reduzir a resolução para melhor performance
+
 ## 📝 Log de Alterações
 
 ### v1.0.0
 - Interface gráfica com Tkinter
+- **Suporte completo para aceleração CUDA/NVENC**
+- **Detecção automática de hardware NVIDIA**
 - Suporte a múltiplos formatos de vídeo
 - Instalação automática do FFmpeg
 - Sistema de validação robusto
 - Barra de progresso em tempo real
 - Sistema de log detalhado
+- **Fallback automático CPU quando CUDA não disponível**
+- **Otimizações de performance para conversão**
 
 ## 🤝 Contribuição
 
