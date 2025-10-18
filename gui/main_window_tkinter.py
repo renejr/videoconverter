@@ -9,9 +9,12 @@ import os
 from pathlib import Path
 
 from core.video_converter import VideoConverterManager
+from core.queue_manager import ConversionQueueManager
 from core.ffmpeg_installer import FFmpegInstaller
 from utils.config import (SUPPORTED_OUTPUT_FORMATS, FPS_OPTIONS, RESOLUTION_PRESETS)
 from utils.validators import validate_input_file, validate_output_directory
+from utils.performance_modes import (PerformanceMode, PerformanceModeConfig, 
+                                   get_performance_mode_labels, get_performance_mode_tooltips)
 
 
 class MainWindow:
@@ -25,8 +28,13 @@ class MainWindow:
         self.root.geometry("900x700")
         self.root.minsize(800, 600)
         
+        # Iniciar em tela cheia (maximizada)
+        self.root.state('zoomed')  # Windows
+        # Para outros sistemas: self.root.attributes('-zoomed', True)
+        
         # Inicializar componentes
         self.video_converter = VideoConverterManager()
+        self.queue_manager = ConversionQueueManager()
         self.conversion_thread = None
         self.ffmpeg_installer = FFmpegInstaller()
         
@@ -35,6 +43,9 @@ class MainWindow:
         
         # Criar interface
         self.create_widgets()
+        
+        # Configurar callbacks globais do queue manager
+        self._setup_queue_callbacks()
         
         # Verificar FFmpeg na inicialização
         self.check_ffmpeg_installation()
@@ -81,6 +92,9 @@ class MainWindow:
         
         # Barra de status
         self.create_status_bar()
+        
+        # Configurar tooltips após criação de todos os widgets
+        self.setup_performance_tooltips()
     
     def create_file_section(self, parent, row):
         """
@@ -91,19 +105,51 @@ class MainWindow:
         file_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
         file_frame.columnconfigure(1, weight=1)
         
-        # Arquivo de entrada
-        ttk.Label(file_frame, text="Arquivo de Entrada:").grid(row=0, column=0, sticky=tk.W, pady=2)
-        self.input_file_var = tk.StringVar()
-        self.input_file_entry = ttk.Entry(file_frame, textvariable=self.input_file_var, width=50)
-        self.input_file_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(5, 5), pady=2)
-        ttk.Button(file_frame, text="Procurar...", command=self.browse_input_file).grid(row=0, column=2, pady=2)
+        # Botões de seleção
+        buttons_frame = ttk.Frame(file_frame)
+        buttons_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        
+        ttk.Button(buttons_frame, text="Adicionar Arquivos...", command=self.browse_input_files).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(buttons_frame, text="Remover Selecionados", command=self.remove_selected_files).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(buttons_frame, text="Limpar Lista", command=self.clear_file_list).pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Lista de arquivos
+        list_frame = ttk.Frame(file_frame)
+        list_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        list_frame.columnconfigure(0, weight=1)
+        list_frame.rowconfigure(0, weight=1)
+        
+        # Treeview para mostrar arquivos
+        columns = ('arquivo', 'status', 'progresso', 'gpu')
+        self.files_tree = ttk.Treeview(list_frame, columns=columns, show='headings', height=6)
+        
+        # Configurar colunas
+        self.files_tree.heading('arquivo', text='Arquivo')
+        self.files_tree.heading('status', text='Status')
+        self.files_tree.heading('progresso', text='Progresso')
+        self.files_tree.heading('gpu', text='GPU')
+        
+        self.files_tree.column('arquivo', width=300, minwidth=200)
+        self.files_tree.column('status', width=100, minwidth=80)
+        self.files_tree.column('progresso', width=100, minwidth=80)
+        self.files_tree.column('gpu', width=80, minwidth=60)
+        
+        # Scrollbar para a lista
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.files_tree.yview)
+        self.files_tree.configure(yscrollcommand=scrollbar.set)
+        
+        self.files_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
         
         # Pasta de saída
-        ttk.Label(file_frame, text="Pasta de Saída:").grid(row=1, column=0, sticky=tk.W, pady=2)
+        ttk.Label(file_frame, text="Pasta de Saída:").grid(row=2, column=0, sticky=tk.W, pady=2)
         self.output_dir_var = tk.StringVar()
         self.output_dir_entry = ttk.Entry(file_frame, textvariable=self.output_dir_var, width=50)
-        self.output_dir_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(5, 5), pady=2)
-        ttk.Button(file_frame, text="Procurar...", command=self.browse_output_dir).grid(row=1, column=2, pady=2)
+        self.output_dir_entry.grid(row=2, column=1, sticky=(tk.W, tk.E), padx=(5, 5), pady=2)
+        ttk.Button(file_frame, text="Procurar...", command=self.browse_output_dir).grid(row=2, column=2, pady=2)
+        
+        # Lista interna de arquivos
+        self.selected_files = []
     
     def create_settings_section(self, parent, row):
         """
@@ -174,6 +220,40 @@ class MainWindow:
         self.transparency_check = ttk.Checkbutton(settings_frame, text="Preservar Transparência",
                                                  variable=self.transparency_var, state="disabled")
         self.transparency_check.grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=5)
+        
+        # Prioridade de Performance
+        priority_frame = ttk.LabelFrame(settings_frame, text="Prioridade de Processamento", padding="5")
+        priority_frame.grid(row=4, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=(10, 5))
+        priority_frame.columnconfigure(1, weight=1)
+        
+        # Variável para o slider de prioridade
+        self.performance_mode_var = tk.IntVar(value=1)  # Default: Automática
+        
+        # Labels dos modos
+        mode_labels = get_performance_mode_labels()
+        
+        # Label esquerda (Econômica)
+        ttk.Label(priority_frame, text=mode_labels[0], font=("TkDefaultFont", 9)).grid(
+            row=0, column=0, sticky=tk.W, padx=(0, 5))
+        
+        # Slider
+        self.performance_slider = ttk.Scale(priority_frame, from_=0, to=2, 
+                                          variable=self.performance_mode_var,
+                                          orient=tk.HORIZONTAL, length=200)
+        self.performance_slider.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=5)
+        self.performance_slider.bind('<ButtonRelease-1>', self.on_performance_mode_changed)
+        self.performance_slider.bind('<B1-Motion>', self.on_performance_mode_changed)
+        
+        # Label direita (Performance)
+        ttk.Label(priority_frame, text=mode_labels[2], font=("TkDefaultFont", 9)).grid(
+            row=0, column=2, sticky=tk.E, padx=(5, 0))
+        
+        # Label central mostrando modo atual
+        self.current_mode_label = ttk.Label(priority_frame, text=mode_labels[1], 
+                                          font=("TkDefaultFont", 9, "bold"))
+        self.current_mode_label.grid(row=1, column=0, columnspan=3, pady=(5, 0))
+        
+        # Tooltips serão configurados após criação de todos os widgets
     
     def create_progress_section(self, parent, row):
         """
@@ -194,6 +274,11 @@ class MainWindow:
         self.status_var = tk.StringVar(value="Pronto para conversão")
         self.status_label = ttk.Label(progress_frame, textvariable=self.status_var)
         self.status_label.grid(row=1, column=0, pady=2)
+        
+        # Label de progresso geral
+        self.progress_label_var = tk.StringVar(value="Progresso Geral: 0.0%")
+        self.progress_label = ttk.Label(progress_frame, textvariable=self.progress_label_var)
+        self.progress_label.grid(row=2, column=0, pady=2)
     
     def create_actions_section(self, parent, row):
         """
@@ -232,26 +317,94 @@ class MainWindow:
         """
         Cria a barra de status
         """
-        self.status_bar = ttk.Label(self.root, text="Pronto", relief=tk.SUNKEN, anchor=tk.W)
+        self.status_bar = ttk.Label(self.root, text="Pronto para Conversão", relief=tk.SUNKEN, anchor=tk.W)
         self.status_bar.grid(row=1, column=0, sticky=(tk.W, tk.E))
     
-    def browse_input_file(self):
+    def update_status_bar(self, message):
         """
-        Abre diálogo para selecionar arquivo de entrada
+        Atualiza a mensagem da barra de status de forma thread-safe
+        """
+        def update_gui():
+            self.status_bar.config(text=message)
+        
+        # Executar na thread principal da GUI
+        self.root.after(0, update_gui)
+    
+    def browse_input_files(self):
+        """
+        Abre diálogo para selecionar múltiplos arquivos de entrada
         """
         filetypes = [
             ("Arquivos de Vídeo", "*.mp4 *.avi *.mov *.mkv *.wmv *.flv *.webm *.m4v"),
             ("Todos os Arquivos", "*.*")
         ]
         
-        filename = filedialog.askopenfilename(
-            title="Selecionar Arquivo de Vídeo",
+        filenames = filedialog.askopenfilenames(
+            title="Selecionar Arquivos de Vídeo",
             filetypes=filetypes
         )
         
-        if filename:
-            self.input_file_var.set(filename)
-            self.log_message(f"Arquivo selecionado: {os.path.basename(filename)}")
+        if filenames:
+            for filename in filenames:
+                if filename not in [f['path'] for f in self.selected_files]:
+                    file_info = {
+                        'path': filename,
+                        'name': os.path.basename(filename),
+                        'status': 'Pendente',
+                        'progress': '0%',
+                        'gpu': '-',
+                        'job_id': None
+                    }
+                    self.selected_files.append(file_info)
+            
+            self.update_files_tree()
+            self.log_message(f"{len(filenames)} arquivo(s) adicionado(s) à lista")
+    
+    def remove_selected_files(self):
+        """
+        Remove arquivos selecionados da lista
+        """
+        selected_items = self.files_tree.selection()
+        if not selected_items:
+            messagebox.showwarning("Aviso", "Selecione arquivos para remover")
+            return
+        
+        # Remover da lista interna
+        for item in selected_items:
+            item_values = self.files_tree.item(item, 'values')
+            if item_values:
+                file_path = item_values[0]  # Primeira coluna é o nome do arquivo
+                # Encontrar e remover da lista
+                self.selected_files = [f for f in self.selected_files if f['name'] != file_path]
+        
+        self.update_files_tree()
+        self.log_message(f"{len(selected_items)} arquivo(s) removido(s) da lista")
+    
+    def clear_file_list(self):
+        """
+        Limpa toda a lista de arquivos
+        """
+        if self.selected_files:
+            self.selected_files.clear()
+            self.update_files_tree()
+            self.log_message("Lista de arquivos limpa")
+    
+    def update_files_tree(self):
+        """
+        Atualiza a visualização da árvore de arquivos
+        """
+        # Limpar árvore
+        for item in self.files_tree.get_children():
+            self.files_tree.delete(item)
+        
+        # Adicionar arquivos
+        for file_info in self.selected_files:
+            self.files_tree.insert('', 'end', values=(
+                file_info['name'],
+                file_info['status'],
+                file_info['progress'],
+                file_info['gpu']
+            ))
     
     def browse_output_dir(self):
         """
@@ -300,6 +453,98 @@ class MainWindow:
         if 'WEBP' in format_selected:
             self.log_message("WebP selecionado: Suporte a animação e transparência disponível")
     
+    def on_performance_mode_changed(self, event=None):
+        """
+        Callback para mudança no modo de performance
+        Atualiza o label central e aplica configurações
+        """
+        mode_value = int(self.performance_mode_var.get())
+        mode_labels = get_performance_mode_labels()
+        
+        # Atualizar label central
+        self.current_mode_label.config(text=mode_labels[mode_value])
+        
+        # Obter configuração do modo
+        performance_mode = PerformanceMode(mode_value)
+        config = PerformanceModeConfig.get_mode_config(performance_mode)
+        
+        # Log da mudança
+        self.log_message(f"Modo de performance alterado para: {config['name']}")
+        self.log_message(f"Descrição: {config['description']}")
+        
+        # Aplicar configurações específicas do modo
+        self.apply_performance_mode_settings(config)
+    
+    def apply_performance_mode_settings(self, config):
+        """
+        Aplica as configurações específicas do modo de performance
+        """
+        # config agora é um dicionário com as configurações
+        mode_name = config['name']
+        mode_icon = config['icon']
+        description = config['description']
+        
+        # Log da aplicação das configurações
+        self.log_message(f"{mode_icon} Modo {mode_name}: {description}")
+        
+        # Aplicar configurações específicas baseadas no modo
+        if config['prefer_cpu']:
+            self.log_message("🖥️ Priorizando processamento por CPU")
+        elif config['prefer_nvidia']:
+            self.log_message("🎮 Priorizando aceleração NVIDIA")
+        
+        # Log de configurações técnicas
+        max_jobs = config['max_concurrent_jobs']
+        self.log_message(f"📊 Máximo de jobs simultâneos: {max_jobs}")
+        
+        if 'nvenc_preset' in config:
+            preset = config['nvenc_preset']
+            self.log_message(f"⚙️ Preset NVENC: {preset}")
+    
+    def setup_performance_tooltips(self):
+        """
+        Configura tooltips para o controle de prioridade de processamento
+        """
+        try:
+            from utils.performance_modes import PerformanceMode, PerformanceModeConfig
+            
+            # Obter informações detalhadas de cada modo
+            tooltips = {}
+            for mode in PerformanceMode:
+                config = PerformanceModeConfig.get_mode_config(mode)
+                tooltip_text = f"{config['name']}\n"
+                tooltip_text += f"📝 {config['description']}\n\n"
+                tooltip_text += f"🖥️ CPU: {config['cpu_preference']}\n"
+                tooltip_text += f"🎮 NVIDIA: {config['nvidia_preference']}\n"
+                tooltip_text += f"⚡ Jobs simultâneos: {config['max_concurrent_jobs']}\n"
+                
+                if config.get('nvenc_preset'):
+                    tooltip_text += f"🎯 Preset NVENC: {config['nvenc_preset']}\n"
+                
+                tooltips[mode.value] = tooltip_text
+            
+            # Função para mostrar tooltip baseado na posição do slider
+            def show_tooltip(event):
+                try:
+                    current_value = int(self.performance_mode_var.get())
+                    if current_value in tooltips:
+                        # Implementação simples de tooltip usando messagebox temporário
+                        # Em uma implementação mais avançada, usaria um widget tooltip personalizado
+                        self.update_status_bar(f"Modo: {tooltips[current_value].split(chr(10))[0]}")
+                except Exception as e:
+                    self.log_message(f"Erro ao mostrar tooltip: {str(e)}")
+            
+            def hide_tooltip(event):
+                self.update_status_bar("Pronto")
+            
+            # Vincular eventos
+            self.performance_slider.bind("<Enter>", show_tooltip)
+            self.performance_slider.bind("<Leave>", hide_tooltip)
+            self.performance_slider.bind("<Motion>", show_tooltip)
+            
+        except Exception as e:
+            self.log_message(f"Erro ao configurar tooltips: {str(e)}")
+    
     def log_message(self, message):
         """
         Adiciona mensagem ao log
@@ -315,12 +560,18 @@ class MainWindow:
         """
         Coleta configurações de conversão
         """
+        # Obter modo de performance atual
+        performance_mode = PerformanceMode(int(self.performance_mode_var.get()))
+        performance_config = PerformanceModeConfig.get_mode_config(performance_mode)
+        
         settings = {
             'format': self.format_var.get(),
             'quality': self.quality_var.get(),
             'transparency': self.transparency_var.get(),
             'fps': self.fps_var.get(),
-            'resolution': self.resolution_var.get()
+            'resolution': self.resolution_var.get(),
+            'performance_mode': performance_mode,
+            'performance_config': performance_config
         }
         
         if settings['fps'] == 'Personalizado':
@@ -339,7 +590,6 @@ class MainWindow:
         state = "disabled" if converting else "normal"
         
         # Controles de arquivo
-        self.input_file_entry.config(state=state)
         self.output_dir_entry.config(state=state)
         
         # Controles de configuração
@@ -362,24 +612,24 @@ class MainWindow:
         self.convert_btn.config(state="disabled" if converting else "normal")
         self.cancel_btn.config(state="normal" if converting else "disabled")
         self.clear_btn.config(state=state)
+        
+        # Atualizar status bar
+        if converting:
+            self.update_status_bar("Conversão em andamento...")
+        else:
+            self.update_status_bar("Pronto para Conversão")
     
     def start_conversion(self):
         """
-        Inicia conversão
+        Inicia conversão de múltiplos arquivos usando o sistema de fila
         """
         # Validações
-        if not self.input_file_var.get():
-            messagebox.showerror("Erro", "Selecione um arquivo de vídeo de entrada.")
+        if not self.selected_files:
+            messagebox.showerror("Erro", "Adicione arquivos à lista para conversão.")
             return
         
         if not self.output_dir_var.get():
             messagebox.showerror("Erro", "Selecione uma pasta de destino.")
-            return
-        
-        # Validar arquivo
-        is_valid, error_msg = validate_input_file(self.input_file_var.get())
-        if not is_valid:
-            messagebox.showerror("Erro", f"Arquivo inválido: {error_msg}")
             return
         
         # Validar diretório
@@ -388,43 +638,95 @@ class MainWindow:
             messagebox.showerror("Erro", f"Diretório inválido: {error_msg}")
             return
         
-        # Configurar callbacks
-        callbacks = {
-            'progress': self.on_progress_updated,
-            'status': self.on_status_updated,
-            'finished': self.on_conversion_finished,
-            'log': self.log_message
-        }
-        
         # Configurações
         settings = self.get_conversion_settings()
         
-        # Iniciar conversão
-        self.set_conversion_state(True)
-        self.log_message("Iniciando conversão...")
+        # Configurar callbacks para o queue manager
+        callbacks = {
+            'job_started': self.on_job_started,
+            'job_progress': self.on_job_progress,
+            'job_finished': self.on_job_finished,
+            'queue_finished': self.on_queue_finished,
+            'log': self.log_message
+        }
         
-        self.conversion_thread = self.video_converter.start_conversion(
-            self.input_file_var.get(),
-            self.output_dir_var.get(),
-            settings,
-            callbacks
-        )
+        # Adicionar arquivos à fila
+        jobs_added = 0
+        for file_info in self.selected_files:
+            if file_info['status'] == 'Pendente':
+                # Validar arquivo
+                is_valid, error_msg = validate_input_file(file_info['path'])
+                if not is_valid:
+                    self.log_message(f"Arquivo inválido ignorado: {file_info['name']} - {error_msg}")
+                    file_info['status'] = 'Erro'
+                    continue
+                
+                # Construir caminho de saída completo
+                input_path = Path(file_info['path'])
+                output_format = settings.get('format', 'mp4')
+                output_filename = f"{input_path.stem}.{output_format}"
+                output_file = os.path.join(self.output_dir_var.get(), output_filename)
+                
+                # Adicionar à fila
+                job_id = self.queue_manager.add_job(
+                    input_file=file_info['path'],
+                    output_file=output_file,
+                    settings=settings,
+                    callbacks=callbacks
+                )
+                
+                file_info['job_id'] = job_id
+                file_info['status'] = 'Na Fila'
+                jobs_added += 1
+        
+        if jobs_added == 0:
+            messagebox.showwarning("Aviso", "Nenhum arquivo válido para conversão.")
+            return
+        
+        # Atualizar interface
+        self.update_files_tree()
+        self.set_conversion_state(True)
+        self.log_message(f"Iniciando conversão de {jobs_added} arquivo(s)...")
+        
+        # Iniciar processamento da fila
+        self.queue_manager.start_queue()
     
     def cancel_conversion(self):
         """
-        Cancela conversão
+        Cancela conversões em andamento
         """
         if messagebox.askyesno("Cancelar", "Tem certeza que deseja cancelar a conversão?"):
-            self.video_converter.cancel_conversion()
-            self.log_message("Conversão cancelada pelo usuário")
-            self.set_conversion_state(False)
-            self.status_var.set("Conversão cancelada")
+            queue_status = self.queue_manager.get_queue_status()
+            if queue_status['is_running'] and (queue_status['active_jobs'] > 0 or queue_status['pending_jobs'] > 0):
+                # Parar toda a fila
+                self.queue_manager.stop_queue()
+                
+                # Atualizar status dos arquivos
+                cancelled_count = 0
+                for file_info in self.selected_files:
+                    if file_info['status'] in ['Na Fila', 'Convertendo']:
+                        file_info['status'] = 'Cancelado'
+                        file_info['progress'] = '0%'
+                        file_info['gpu'] = '-'
+                        cancelled_count += 1
+                
+                self.update_files_tree()
+                self.set_conversion_state(False)
+                self.progress_var.set(0)  # Resetar progresso
+                self.update_status_bar(f"Conversão cancelada - {cancelled_count} arquivos")
+                self.log_message(f"Conversões canceladas ({cancelled_count} arquivos)")
+                self.status_var.set("Conversão cancelada")
+            else:
+                self.log_message("Nenhuma conversão em andamento")
     
     def clear_fields(self):
         """
         Limpa todos os campos
         """
-        self.input_file_var.set("")
+        # Limpar lista de arquivos
+        self.selected_files.clear()
+        self.update_files_tree()
+        
         self.output_dir_var.set("")
         self.format_var.set("MP4")
         self.quality_var.set("Média")
@@ -439,34 +741,124 @@ class MainWindow:
         self.log_text.delete(1.0, tk.END)
         self.log_message("Campos limpos")
     
-    def on_progress_updated(self, progress):
+    def on_job_started(self, job_id, input_file, gpu_info):
         """
-        Callback para progresso
+        Callback quando um job inicia (thread-safe)
         """
-        self.progress_var.set(progress)
-        self.root.update_idletasks()
-    
-    def on_status_updated(self, status):
-        """
-        Callback para status
-        """
-        self.status_var.set(status)
-        self.root.update_idletasks()
-    
-    def on_conversion_finished(self, success, message):
-        """
-        Callback para conclusão
-        """
-        self.set_conversion_state(False)
+        def update_gui():
+            # Encontrar arquivo na lista e atualizar status
+            for file_info in self.selected_files:
+                if file_info['job_id'] == job_id:
+                    file_info['status'] = 'Convertendo'
+                    file_info['gpu'] = gpu_info.get('name', 'CPU')
+                    break
+            
+            self.update_files_tree()
+            filename = os.path.basename(input_file)
+            
+            # Atualizar status bar com arquivo atual
+            self.update_status_bar(f"Convertendo: {filename}")
+            
+            self.log_message(f"Iniciando conversão: {filename} (GPU: {gpu_info.get('name', 'CPU')})")
         
-        if success:
-            messagebox.showinfo("Sucesso", message)
-            self.log_message("✓ Conversão concluída com sucesso!")
-        else:
-            messagebox.showerror("Erro", message)
-            self.log_message(f"✗ Erro na conversão: {message}")
+        # Executar na thread principal da GUI
+        self.root.after(0, update_gui)
+    
+    def on_job_progress(self, job_id, progress):
+        """
+        Callback para atualização de progresso de um job (thread-safe)
+        """
+        def update_gui():
+            # Encontrar arquivo na lista e atualizar progresso
+            current_file = None
+            for file_info in self.selected_files:
+                if file_info['job_id'] == job_id:
+                    file_info['progress'] = f"{progress}%"
+                    current_file = file_info['name']
+                    break
+            
+            self.update_files_tree()
+            
+            # Atualizar progresso geral (média de todos os jobs)
+            total_progress = 0
+            active_jobs = 0
+            for file_info in self.selected_files:
+                if file_info['status'] in ['Convertendo', 'Concluído']:
+                    progress_val = int(float(file_info['progress'].replace('%', '')))
+                    total_progress += progress_val
+                    active_jobs += 1
+            
+            if active_jobs > 0:
+                avg_progress = total_progress // active_jobs
+                self.progress_var.set(avg_progress)
+            
+            # Atualizar status bar com progresso
+            if current_file:
+                self.update_status_bar(f"Convertendo: {current_file} - {progress:.1f}%")
+            
+            # Log de progresso a cada 10%
+            if progress % 10 == 0:
+                self.log_message(f"Progresso: {progress:.1f}%")
         
-        self.status_var.set("Pronto para conversão")
+        # Executar na thread principal da GUI
+        self.root.after(0, update_gui)
+    
+    def on_job_finished(self, job_id, success, message, output_file=None):
+        """
+        Callback quando um job termina (thread-safe)
+        """
+        def update_gui():
+            # Encontrar e atualizar arquivo na lista
+            for file_info in self.selected_files:
+                if file_info['job_id'] == job_id:
+                    file_info['status'] = "Concluído" if success else "Erro"
+                    file_info['progress'] = "100%" if success else "0%"
+                    break
+            
+            # Atualizar a visualização da lista
+            self.update_files_tree()
+            
+            # Log do resultado
+            filename = os.path.basename(output_file) if output_file else "arquivo"
+            if success:
+                self.log_message(f"✓ Conversão concluída: {filename}")
+                self.update_status_bar(f"Concluído: {filename}")
+            else:
+                self.log_message(f"✗ Erro na conversão: {message}")
+                self.update_status_bar(f"Erro: {filename}")
+        
+        # Executar na thread principal da GUI
+        self.root.after(0, update_gui)
+    
+    def on_queue_finished(self, total_jobs, successful_jobs, failed_jobs):
+        """
+        Callback quando toda a fila termina (thread-safe)
+        """
+        def update_gui():
+            # Restaurar estado dos controles
+            self.set_conversion_state(False)
+            self.progress_var.set(0)  # Resetar progresso para 0
+            
+            # Atualizar status bar
+            if failed_jobs == 0:
+                self.update_status_bar(f"Conversão finalizada - {successful_jobs} arquivos convertidos")
+            else:
+                self.update_status_bar(f"Conversão finalizada - {successful_jobs} sucessos, {failed_jobs} falhas")
+            
+            message = f"Processamento concluído!\n"
+            message += f"Total: {total_jobs} arquivos\n"
+            message += f"Sucessos: {successful_jobs}\n"
+            message += f"Falhas: {failed_jobs}"
+            
+            self.log_message(f"Fila de conversão finalizada - {successful_jobs}/{total_jobs} sucessos")
+            
+            if failed_jobs == 0:
+                messagebox.showinfo("Sucesso", message)
+            else:
+                messagebox.showwarning("Concluído com Erros", message)
+        
+        # Executar na thread principal da GUI
+        self.root.after(0, update_gui)
     
     def check_ffmpeg_installation(self):
         """
@@ -499,6 +891,154 @@ class MainWindow:
         
         # Executar verificação em thread separada
         threading.Thread(target=check_and_install, daemon=True).start()
+
+    def _setup_queue_callbacks(self):
+        """
+        Configura callbacks globais para o gerenciador de fila
+        """
+        callbacks = {
+            'queue_updated': self._on_queue_updated,
+            'job_started': self._on_job_started_global,
+            'job_completed': self._on_job_completed,
+            'job_failed': self._on_job_failed,
+            'job_progress': self._on_job_progress_global,
+            'queue_finished': self.on_queue_finished,  # ✅ ADICIONADO: callback para fila finalizada
+            'log': self._on_log_message
+        }
+        self.queue_manager.set_global_callbacks(callbacks)
+
+    def _on_queue_updated(self, queue_data):
+        """
+        Callback para atualização da fila de conversão
+        
+        Args:
+            queue_data: Dados atualizados da fila
+        """
+        def update_gui():
+            self.log_message(f"Fila atualizada: {len(queue_data)} jobs na fila")
+        
+        self.root.after(0, update_gui)
+
+    def _on_job_started_global(self, job_data):
+        """
+        Callback global para início de um job de conversão
+        
+        Args:
+            job_data: Dicionário com dados do job iniciado
+        """
+        def update_gui():
+            # Encontrar o arquivo na lista e atualizar status e GPU
+            job_id = job_data.get('id')
+            for file_info in self.selected_files:
+                if file_info.get('job_id') == job_id:
+                    file_info['status'] = 'Processando'
+                    assigned_gpu = job_data.get('assigned_gpu', 'CPU')
+                    file_info['gpu'] = assigned_gpu if assigned_gpu else 'CPU'
+                    break
+            
+            self.update_files_tree()
+            input_file = job_data.get('input_file', 'Arquivo desconhecido')
+            assigned_gpu = job_data.get('assigned_gpu', 'CPU')
+            gpu_display = assigned_gpu if assigned_gpu else 'CPU'
+            self.log_message(f"Iniciando conversão: {os.path.basename(input_file)} (GPU: {gpu_display})")
+        
+        self.root.after(0, update_gui)
+
+    def _on_job_completed(self, job_data):
+        """
+        Callback para job completado com sucesso
+        
+        Args:
+            job_data: Dicionário com dados do job completado
+        """
+        def update_gui():
+            # Encontrar o arquivo na lista e atualizar status
+            job_id = job_data.get('id')
+            for file_info in self.selected_files:
+                if file_info.get('job_id') == job_id:
+                    file_info['status'] = 'Concluído'
+                    break
+            
+            self.update_files_tree()
+            output_file = job_data.get('output_file', 'Arquivo de saída')
+            self.log_message(f"✓ Conversão concluída: {os.path.basename(output_file)}")
+        
+        self.root.after(0, update_gui)
+
+    def _on_job_failed(self, job_data):
+        """
+        Callback para job que falhou
+        
+        Args:
+            job_data: Dicionário com dados do job que falhou
+        """
+        def update_gui():
+            # Encontrar o arquivo na lista e atualizar status
+            job_id = job_data.get('id')
+            error = job_data.get('error_message', 'Erro desconhecido')
+            for file_info in self.selected_files:
+                if file_info.get('job_id') == job_id:
+                    file_info['status'] = 'Erro'
+                    break
+            
+            self.update_files_tree()
+            self.log_message(f"✗ Erro na conversão (Job {job_id}): {error}")
+        
+        self.root.after(0, update_gui)
+
+    def _on_job_progress_global(self, job_id, progress_data):
+        """
+        Callback global para progresso de um job
+        
+        Args:
+            job_id: ID do job
+            progress_data: Dados de progresso (int representando porcentagem)
+        """
+        def update_gui():
+            # Atualizar progresso individual do arquivo
+            # progress_data é um int representando a porcentagem
+            if isinstance(progress_data, dict):
+                percentage = progress_data.get('percentage', 0)
+            else:
+                percentage = progress_data if isinstance(progress_data, (int, float)) else 0
+            for file_info in self.selected_files:
+                if file_info.get('job_id') == job_id:
+                    file_info['progress'] = f"{percentage:.1f}%"
+                    break
+            
+            self.update_files_tree()
+            
+            # Calcular progresso geral
+            total_files = len([f for f in self.selected_files if f.get('job_id')])
+            if total_files > 0:
+                # Extrair valores numéricos do progresso para calcular média
+                progress_values = []
+                for f in self.selected_files:
+                    if f.get('job_id'):
+                        progress_str = f.get('progress', '0%')
+                        if isinstance(progress_str, str) and '%' in progress_str:
+                            progress_values.append(float(progress_str.replace('%', '')))
+                        else:
+                            progress_values.append(0)
+                
+                if progress_values:
+                    overall_progress = sum(progress_values) / len(progress_values)
+                    self.progress_var.set(overall_progress)
+                    self.progress_label_var.set(f"Progresso Geral: {overall_progress:.1f}%")
+        
+        self.root.after(0, update_gui)
+
+    def _on_log_message(self, message):
+        """
+        Callback para mensagens de log
+        
+        Args:
+            message: Mensagem a ser logada
+        """
+        def update_gui():
+            self.log_message(message)
+        
+        self.root.after(0, update_gui)
 
 
 def main():

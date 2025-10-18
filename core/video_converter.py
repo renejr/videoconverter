@@ -257,11 +257,25 @@ class VideoConverter(threading.Thread):
         format_name = settings.get('format', 'MP4 (H.264)')
         use_hardware = settings.get('use_hardware_acceleration', True)
         
-        # Determinar se usar CUDA ou CPU
-        use_cuda = (self.cuda_available and 
-                   use_hardware and 
-                   not self.cuda_fallback_attempted and
-                   self.hw_settings.get('enabled', False))
+        # Obter configuração do modo de performance
+        performance_config = settings.get('performance_config', {})
+        cpu_preference = performance_config.get('cpu_preference', 'auto')
+        nvidia_preference = performance_config.get('nvidia_preference', 'auto')
+        
+        # Determinar se usar CUDA ou CPU baseado no modo de performance
+        if cpu_preference == 'force':
+            # Modo Econômico: Forçar CPU sempre
+            use_cuda = False
+        elif nvidia_preference == 'force' and self.cuda_available:
+            # Modo Performance: Forçar NVIDIA se disponível
+            use_cuda = (not self.cuda_fallback_attempted and
+                       self.hw_settings.get('enabled', False))
+        else:
+            # Modo Automático: Usar lógica original
+            use_cuda = (self.cuda_available and 
+                       use_hardware and 
+                       not self.cuda_fallback_attempted and
+                       self.hw_settings.get('enabled', False))
         
         # Codec de vídeo
         if 'H.264' in format_name:
@@ -347,11 +361,15 @@ class VideoConverter(threading.Thread):
         quality_presets = self.hardware_config.get('quality_presets', {})
         nvenc_presets = quality_presets.get('nvenc', NVENC_QUALITY_PRESETS)
         
+        # Obter preset NVENC do modo de performance
+        performance_config = settings.get('performance_config', {})
+        nvenc_preset = performance_config.get('nvenc_preset', 'medium')
+        
         if quality in nvenc_presets:
             preset_config = nvenc_presets[quality]
             
-            # Preset NVENC
-            cmd.extend(['-preset', preset_config.get('preset', 'medium')])
+            # Preset NVENC (usar do modo de performance se disponível)
+            cmd.extend(['-preset', nvenc_preset])
             
             # Rate control
             rc_mode = preset_config.get('rc_mode', 'vbr')
@@ -800,7 +818,27 @@ class VideoConverterManager:
             })
         
         return formats
-    
+
+    def get_max_concurrent_jobs(self, settings):
+        """
+        Obtém o número máximo de jobs simultâneos baseado no modo de performance
+        
+        Args:
+            settings: Configurações de conversão incluindo performance_config
+            
+        Returns:
+            int: Número máximo de jobs simultâneos
+        """
+        performance_config = settings.get('performance_config', {})
+        max_jobs = performance_config.get('max_concurrent_jobs', 2)
+        
+        # Ajustar baseado na disponibilidade de hardware
+        if not self.cuda_available and max_jobs > 1:
+            # Reduzir jobs simultâneos se não há aceleração de hardware
+            max_jobs = max(1, max_jobs // 2)
+        
+        return max_jobs
+
     def get_hardware_info(self):
         """
         Retorna informações sobre a configuração de hardware disponível

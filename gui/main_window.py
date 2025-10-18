@@ -13,6 +13,7 @@ from PyQt6.QtGui import QFont, QIcon
 
 from core.ffmpeg_installer import FFmpegInstaller
 from core.video_converter import VideoConverterManager
+from core.queue_manager import ConversionQueueManager
 from utils.config import (SUPPORTED_OUTPUT_FORMATS, FPS_OPTIONS, RESOLUTION_PRESETS,
                          WINDOW_MIN_SIZE, WINDOW_DEFAULT_SIZE, MAIN_WINDOW_STYLE)
 
@@ -30,8 +31,10 @@ class VideoConverterWindow(QMainWindow):
         self.resize(*WINDOW_DEFAULT_SIZE)
         self.setStyleSheet(MAIN_WINDOW_STYLE)
         self.video_converter = VideoConverterManager()
+        self.queue_manager = ConversionQueueManager()
         self.conversion_thread = None
         self.init_ui()
+        self._setup_queue_callbacks()
         self.check_ffmpeg_installation()
     
     def init_ui(self):
@@ -318,7 +321,7 @@ class VideoConverterWindow(QMainWindow):
     
     def start_conversion(self):
         """
-        Inicia o processo de conversão de vídeo
+        Inicia o processo de conversão de vídeo usando o sistema de fila
         """
         # Validar campos obrigatórios
         if not self.input_file_edit.text():
@@ -340,39 +343,46 @@ class VideoConverterWindow(QMainWindow):
         # Coletar configurações
         settings = self.get_conversion_settings()
         
-        # Configurar callbacks
-        callbacks = {
-            'progress': self.on_progress_updated,
-            'status': self.on_status_updated,
-            'finished': self.on_conversion_finished,
+        # Configurar callbacks específicos do job
+        job_callbacks = {
+            'job_progress': self.on_progress_updated,
+            'job_status': self.on_status_updated,
+            'job_finished': self.on_conversion_finished,
             'log': self.log_message
         }
         
         # Desabilitar controles durante conversão
         self.set_conversion_state(True)
         
-        # Iniciar conversão
-        self.conversion_thread = self.video_converter.start_conversion(
-            input_file, output_dir, settings, callbacks
+        # Adicionar job à fila e iniciar processamento
+        job_id = self.queue_manager.add_job(
+            input_file=input_file,
+            output_dir=output_dir,
+            settings=settings,
+            callbacks=job_callbacks
         )
+        
+        # Iniciar a fila se não estiver rodando
+        self.queue_manager.start_queue()
+        
+        self.log_message(f"Job {job_id} adicionado à fila de conversão")
     
     def cancel_conversion(self):
         """
         Cancela a conversão em andamento
         """
-        if hasattr(self, 'conversion_thread') and self.conversion_thread:
-            reply = QMessageBox.question(
-                self, 
-                "Cancelar Conversão", 
-                "Tem certeza que deseja cancelar a conversão?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            
-            if reply == QMessageBox.StandardButton.Yes:
-                self.video_converter.cancel_conversion()
-                self.log_message("Conversão cancelada pelo usuário")
-                self.set_conversion_state(False)
-                self.status_label.setText("Conversão cancelada")
+        reply = QMessageBox.question(
+            self, 
+            "Cancelar Conversão", 
+            "Tem certeza que deseja cancelar todas as conversões?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            self.queue_manager.stop_queue()
+            self.log_message("Fila de conversão parada pelo usuário")
+            self.set_conversion_state(False)
+            self.status_label.setText("Conversão cancelada")
     
     def clear_fields(self):
         """
@@ -489,3 +499,95 @@ class VideoConverterWindow(QMainWindow):
             self.log_message(f"✗ Erro na conversão: {message}")
         
         self.status_label.setText("Pronto para conversão")
+    
+    def _setup_queue_callbacks(self):
+        """
+        Configura callbacks para o gerenciador de fila
+        """
+        callbacks = {
+            'queue_updated': self._on_queue_updated,
+            'job_started': self._on_job_started,  # Implementado: callback que estava faltando
+            'job_completed': self._on_job_completed,
+            'job_failed': self._on_job_failed,
+            'job_progress': self._on_job_progress,  # Corrigido: usar 'job_progress' em vez de 'job_status'
+            'log': self._on_log_message
+        }
+        self.queue_manager.set_global_callbacks(callbacks)
+
+    def _on_queue_updated(self, queue_data):
+        """
+        Callback para atualização da fila de conversão
+        
+        Args:
+            queue_data: Dados atualizados da fila
+        """
+        self.log_message(f"Fila atualizada: {len(queue_data)} jobs na fila")
+    
+    def _on_job_started(self, job_id, job_data):
+        """
+        Callback para início de um job de conversão
+        
+        Args:
+            job_id: ID do job iniciado
+            job_data: Dados do job
+        """
+        self.log_message(f"Iniciando conversão: {job_data.get('input_file', 'arquivo desconhecido')}")
+        self.set_conversion_state(True)
+        self.status_label.setText("Conversão iniciada...")
+    
+    def _on_job_completed(self, job_id, result):
+        """
+        Callback para conclusão bem-sucedida de um job
+        
+        Args:
+            job_id: ID do job concluído
+            result: Resultado da conversão
+        """
+        self.log_message(f"✓ Conversão concluída com sucesso! Job ID: {job_id}")
+        self.set_conversion_state(False)
+        self.status_label.setText("Conversão concluída")
+        QMessageBox.information(self, "Sucesso", "Conversão concluída com sucesso!")
+    
+    def _on_job_failed(self, job_id, error):
+        """
+        Callback para falha em um job
+        
+        Args:
+            job_id: ID do job que falhou
+            error: Erro ocorrido
+        """
+        self.log_message(f"✗ Erro na conversão! Job ID: {job_id} - Erro: {error}")
+        self.set_conversion_state(False)
+        self.status_label.setText("Erro na conversão")
+        QMessageBox.critical(self, "Erro", f"Erro na conversão: {error}")
+    
+    def _on_job_progress(self, job_id, progress_data):
+        """
+        Callback para atualização de progresso de um job
+        
+        Args:
+            job_id: ID do job
+            progress_data: Dados de progresso (porcentagem, status, etc.)
+        """
+        if isinstance(progress_data, dict):
+            percentage = progress_data.get('percentage', 0)
+            status = progress_data.get('status', '')
+        else:
+            # Se progress_data for apenas um número (porcentagem)
+            percentage = progress_data
+            status = f"Progresso: {percentage}%"
+        
+        self.progress_bar.setValue(int(percentage))
+        if status:
+            self.status_label.setText(status)
+        
+        self.log_message(f"Progresso Job {job_id}: {percentage}%")
+    
+    def _on_log_message(self, message):
+        """
+        Callback para mensagens de log
+        
+        Args:
+            message: Mensagem de log
+        """
+        self.log_message(message)
