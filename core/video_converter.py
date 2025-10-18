@@ -12,7 +12,8 @@ from pathlib import Path
 
 from utils.config import (SUPPORTED_INPUT_FORMATS, QUALITY_PRESETS, 
                          RESOLUTION_PRESETS, FFMPEG_TIMEOUT, FFMPEG_PROGRESS_REGEX,
-                         get_hardware_config, NVENC_QUALITY_PRESETS, NVENC_CODEC_SETTINGS)
+                         get_hardware_config, NVENC_QUALITY_PRESETS, NVENC_CODEC_SETTINGS,
+                         AVI_QUALITY_PRESETS, AVI_AUDIO_CONFIG)
 from utils.validators import (validate_input_file, validate_output_directory,
                              validate_conversion_settings, generate_output_filename)
 from .ffmpeg_installer import FFmpegInstaller
@@ -257,6 +258,9 @@ class VideoConverter(threading.Thread):
         format_name = settings.get('format', 'MP4 (H.264)')
         use_hardware = settings.get('use_hardware_acceleration', True)
         
+        # Verificar se é formato AVI
+        is_avi_format = self._is_avi_format()
+        
         # Obter configuração do modo de performance
         performance_config = settings.get('performance_config', {})
         cpu_preference = performance_config.get('cpu_preference', 'auto')
@@ -277,26 +281,33 @@ class VideoConverter(threading.Thread):
                        not self.cuda_fallback_attempted and
                        self.hw_settings.get('enabled', False))
         
-        # Codec de vídeo
-        if 'H.264' in format_name:
-            if use_cuda:
-                self.add_cuda_video_settings(cmd, 'h264')
+        # Para AVI, usar configurações específicas otimizadas
+        if is_avi_format:
+            self.add_avi_video_settings(cmd)
+        # Codec de vídeo baseado na seleção do usuário
+        else:
+            # Obter codec selecionado pelo usuário (padrão: h264)
+            selected_codec = settings.get('codec', 'h264')
+            
+            # Verificar se o formato suporta codecs específicos
+            if 'VP9' in format_name:
+                # VP9 não tem suporte NVENC, usar CPU
+                self.add_cpu_video_settings(cmd, 'vp9')
+            elif 'WEBP' in format_name:
+                # WebP não tem suporte NVENC, usar CPU
+                self.add_cpu_video_settings(cmd, 'webp')
             else:
-                self.add_cpu_video_settings(cmd, 'h264')
-                
-        elif 'H.265' in format_name:
-            if use_cuda:
-                self.add_cuda_video_settings(cmd, 'hevc')
-            else:
-                self.add_cpu_video_settings(cmd, 'hevc')
-                
-        elif 'VP9' in format_name:
-            # VP9 não tem suporte NVENC, usar CPU
-            self.add_cpu_video_settings(cmd, 'vp9')
-                
-        elif 'WEBP' in format_name:
-            # WebP não tem suporte NVENC, usar CPU
-            self.add_cpu_video_settings(cmd, 'webp')
+                # Para MP4, MKV e outros formatos, usar codec selecionado
+                if selected_codec == 'hevc':  # H.265
+                    if use_cuda:
+                        self.add_cuda_video_settings(cmd, 'hevc')
+                    else:
+                        self.add_cpu_video_settings(cmd, 'hevc')
+                else:  # H.264 (padrão)
+                    if use_cuda:
+                        self.add_cuda_video_settings(cmd, 'h264')
+                    else:
+                        self.add_cpu_video_settings(cmd, 'h264')
             
         # Configurações de FPS
         fps = settings.get('fps')
@@ -329,6 +340,62 @@ class VideoConverter(threading.Thread):
             if 'WEBP' in format_name or 'WebM' in format_name or 'MOV' in format_name:
                 cmd.extend(['-pix_fmt', 'yuva420p'])
     
+    def _is_avi_format(self):
+        """
+        Verifica se o formato de saída é AVI
+        
+        Returns:
+            bool: True se for formato AVI
+        """
+        if not self.output_file:
+            return False
+        
+        output_ext = Path(self.output_file).suffix.lower()
+        format_name = self.conversion_settings.get('format', '')
+        
+        # Verificar extensão do arquivo de saída primeiro (prioridade máxima)
+        if output_ext == '.avi':
+            return True
+        
+        # Verificar se o formato especificado é especificamente AVI (apenas se não for extensão .avi)
+        if format_name:
+            format_upper = format_name.upper()
+            # Deve conter 'AVI' mas não outros formatos
+            if (format_upper == 'AVI' or 
+                (format_upper.startswith('AVI') and not any(x in format_upper for x in ['MP4', 'MKV', 'MOV', 'WEBM']))):
+                return True
+        
+        return False
+    
+    def add_avi_video_settings(self, cmd):
+        """
+        Adiciona configurações de vídeo específicas para formato AVI
+        
+        Args:
+            cmd: Lista do comando FFmpeg
+        """
+        settings = self.conversion_settings
+        quality = settings.get('quality', 'Média')
+        
+        # Usar configurações específicas do AVI
+        avi_preset = AVI_QUALITY_PRESETS.get(quality, AVI_QUALITY_PRESETS['Média'])
+        
+        # Codec de vídeo: sempre usar libx264 para AVI (melhor compatibilidade)
+        cmd.extend(['-c:v', 'libx264'])
+        
+        # Configurações de qualidade específicas para AVI
+        cmd.extend(['-crf', str(avi_preset['crf'])])
+        cmd.extend(['-preset', avi_preset['preset']])
+        cmd.extend(['-profile:v', avi_preset['profile']])
+        cmd.extend(['-level', avi_preset['level']])
+        cmd.extend(['-tune', avi_preset['tune']])
+        
+        # Configurações adicionais para melhor compatibilidade AVI
+        cmd.extend(['-pix_fmt', 'yuv420p'])  # Formato de pixel compatível
+        cmd.extend(['-movflags', '+faststart'])  # Otimização para streaming
+        
+        self._call_callback('log', f"Configurações AVI aplicadas - Qualidade: {quality}, CRF: {avi_preset['crf']}")
+    
     def add_cuda_video_settings(self, cmd, codec_type):
         """
         Adiciona configurações de vídeo CUDA/NVENC ao comando FFmpeg
@@ -352,10 +419,8 @@ class VideoConverter(threading.Thread):
         
         cmd.extend(['-c:v', encoder])
         
-        # Adicionar filtro de conversão de formato se usando CUDA decoder
-        # Isso resolve o problema de incompatibilidade entre filtros CUDA e CPU
-        if self.hw_settings.get('enabled', False):
-            cmd.extend(['-vf', 'hwdownload,format=nv12'])
+        # Não adicionar filtros de conversão automáticos para evitar incompatibilidades
+        # O NVENC pode trabalhar diretamente com formatos de entrada padrão
         
         # Configurações de qualidade NVENC
         quality_presets = self.hardware_config.get('quality_presets', {})
@@ -464,18 +529,48 @@ class VideoConverter(threading.Thread):
         # Determinar codec de áudio baseado no formato de saída
         output_ext = Path(self.output_file).suffix.lower()
         
-        if output_ext == '.webm':
+        if output_ext == '.avi':
+            # AVI: usar configurações específicas de MP3 otimizadas
+            self.add_avi_audio_settings(cmd)
+        elif output_ext == '.webm':
             # WebM suporta apenas Vorbis ou Opus
             cmd.extend(['-c:a', 'libopus', '-b:a', '192k'])
         elif output_ext in ['.mp4', '.mov', '.m4v']:
             # MP4 e formatos relacionados usam AAC
             cmd.extend(['-c:a', 'aac', '-b:a', '192k'])
-        elif output_ext in ['.mkv', '.avi']:
-            # MKV e AVI podem usar AAC ou outros codecs
+        elif output_ext == '.mkv':
+            # MKV pode usar AAC ou outros codecs
             cmd.extend(['-c:a', 'aac', '-b:a', '192k'])
         else:
             # Padrão para outros formatos
             cmd.extend(['-c:a', 'aac', '-b:a', '192k'])
+    
+    def add_avi_audio_settings(self, cmd):
+        """
+        Adiciona configurações de áudio específicas para formato AVI
+        
+        Args:
+            cmd: Lista do comando FFmpeg
+        """
+        # Usar configurações específicas do AVI
+        audio_config = AVI_AUDIO_CONFIG
+        
+        # Codec de áudio MP3
+        cmd.extend(['-c:a', 'libmp3lame'])
+        
+        # Bitrate otimizado para MP3
+        cmd.extend(['-b:a', audio_config['bitrate']])
+        
+        # Sample rate
+        cmd.extend(['-ar', audio_config['sample_rate']])
+        
+        # Número de canais
+        cmd.extend(['-ac', str(audio_config['channels'])])
+        
+        # Qualidade VBR para MP3 (opcional, para melhor qualidade)
+        cmd.extend(['-q:a', str(audio_config['quality'])])
+        
+        self._call_callback('log', f"Configurações de áudio AVI aplicadas - MP3 {audio_config['bitrate']} @ {audio_config['sample_rate']}Hz")
     
     def run(self):
         """

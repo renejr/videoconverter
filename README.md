@@ -422,7 +422,14 @@ Se o instalador automático falhar ou você usar instalação manual:
 
 ## 📝 Log de Alterações
 
-### v2.1.0 (Atual)
+### v2.1.1 (Atual)
+- **🔧 Correção NVENC**: Corrigido problema de incompatibilidade entre filtros de vídeo e NVENC
+- **🎯 Mapeamento de Codec**: Implementado mapeamento automático de codec da interface (H.264/H.265) para formato interno
+- **⚡ Otimização de Filtros**: Removido filtro `hwdownload,format=nv12` que causava conflitos entre CUDA e CPU
+- **🛠️ Estabilidade**: Melhorada estabilidade da conversão NVENC com GPUs NVIDIA
+- **📊 Compatibilidade**: Garantida compatibilidade entre interface gráfica e motor de conversão
+
+### v2.1.0
 - **🚀 Sistema de Autoinstalação**: Instalador automático inteligente completo
 - **🎯 Detecção Multi-Plataforma**: Suporte Windows, Linux e macOS
 - **🐍 Gerenciamento Python 3.13**: Instalação e configuração automática

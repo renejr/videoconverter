@@ -126,6 +126,7 @@ class VideoConverterWindow(QMainWindow):
         layout.addWidget(QLabel("Formato de Saída:"), 0, 0)
         self.format_combo = QComboBox()
         self.format_combo.addItems(SUPPORTED_OUTPUT_FORMATS)
+        self.format_combo.currentTextChanged.connect(self.on_format_changed)
         layout.addWidget(self.format_combo, 0, 1)
         
         # FPS
@@ -169,9 +170,17 @@ class VideoConverterWindow(QMainWindow):
         self.quality_combo.addItems(["Alta", "Média", "Baixa", "Personalizada"])
         layout.addWidget(self.quality_combo, 2, 1)
         
+        # Codec de vídeo
+        layout.addWidget(QLabel("Codec de Vídeo:"), 2, 2)
+        self.codec_combo = QComboBox()
+        self.codec_combo.addItems(["H.264 (Recomendado)", "H.265 (HEVC)"])
+        self.codec_combo.setCurrentText("H.264 (Recomendado)")  # Padrão H.264
+        self.codec_combo.currentTextChanged.connect(self.on_codec_changed)
+        layout.addWidget(self.codec_combo, 2, 3)
+        
         # Manter transparência
         self.transparency_check = QCheckBox("Manter Transparência")
-        layout.addWidget(self.transparency_check, 2, 2, 1, 2)
+        layout.addWidget(self.transparency_check, 2, 4, 1, 2)
         
         return group
     
@@ -279,6 +288,51 @@ class VideoConverterWindow(QMainWindow):
         is_custom = text == "Personalizada"
         self.width_spin.setEnabled(is_custom)
         self.height_spin.setEnabled(is_custom)
+    
+    def on_format_changed(self, text):
+        """
+        Callback para mudança no formato de saída
+        Valida compatibilidade do codec com o formato
+        """
+        self._validate_codec_compatibility()
+    
+    def on_codec_changed(self, text):
+        """
+        Callback para mudança na seleção de codec
+        Registra a mudança no log
+        """
+        codec_name = "H.264" if "H.264" in text else "H.265"
+        self.log_message(f"Codec selecionado: {codec_name}")
+        self._validate_codec_compatibility()
+    
+    def _validate_codec_compatibility(self):
+        """
+        Valida a compatibilidade entre codec e formato
+        Desabilita H.265 para formato AVI
+        """
+        current_format = self.format_combo.currentText()
+        is_avi = "AVI" in current_format.upper()
+        
+        if is_avi:
+            # Para AVI, forçar H.264 e desabilitar H.265
+            if "H.265" in self.codec_combo.currentText():
+                self.codec_combo.setCurrentText("H.264 (Recomendado)")
+                self.log_message("⚠️ H.265 não é compatível com AVI. Alterado para H.264.")
+            
+            # Desabilitar opção H.265 para AVI
+            for i in range(self.codec_combo.count()):
+                item_text = self.codec_combo.itemText(i)
+                if "H.265" in item_text:
+                    # Criar um modelo personalizado para desabilitar o item
+                    model = self.codec_combo.model()
+                    item = model.item(i)
+                    item.setEnabled(False)
+        else:
+            # Para outros formatos, habilitar todas as opções
+            for i in range(self.codec_combo.count()):
+                model = self.codec_combo.model()
+                item = model.item(i)
+                item.setEnabled(True)
     
     def check_ffmpeg_installation(self):
         """
@@ -416,12 +470,17 @@ class VideoConverterWindow(QMainWindow):
         Returns:
             dict: Configurações de conversão
         """
+        # Determinar o codec baseado na seleção
+        codec_text = self.codec_combo.currentText()
+        codec = "h264" if "H.264" in codec_text else "hevc"
+        
         settings = {
             'format': self.format_combo.currentText(),
             'quality': self.quality_combo.currentText(),
             'transparency': self.transparency_check.isChecked(),
             'fps': self.fps_combo.currentText(),
-            'resolution': self.resolution_combo.currentText()
+            'resolution': self.resolution_combo.currentText(),
+            'codec': codec
         }
         
         # FPS personalizado

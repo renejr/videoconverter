@@ -160,6 +160,7 @@ class MainWindow:
         settings_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
         settings_frame.columnconfigure(1, weight=1)
         settings_frame.columnconfigure(3, weight=1)
+        settings_frame.columnconfigure(5, weight=1)
         
         # Formato
         ttk.Label(settings_frame, text="Formato:").grid(row=0, column=0, sticky=tk.W, pady=2)
@@ -175,6 +176,14 @@ class MainWindow:
         self.quality_combo = ttk.Combobox(settings_frame, textvariable=self.quality_var,
                                          values=["Baixa", "Média", "Alta", "Muito Alta"], state="readonly")
         self.quality_combo.grid(row=0, column=3, sticky=(tk.W, tk.E), padx=(5, 0), pady=2)
+        
+        # Codec de Vídeo
+        ttk.Label(settings_frame, text="Codec de Vídeo:").grid(row=0, column=4, sticky=tk.W, pady=2, padx=(10, 0))
+        self.codec_var = tk.StringVar(value="H.264 (Recomendado)")
+        self.codec_combo = ttk.Combobox(settings_frame, textvariable=self.codec_var,
+                                       values=["H.264 (Recomendado)", "H.265 (HEVC)"], state="readonly")
+        self.codec_combo.grid(row=0, column=5, sticky=(tk.W, tk.E), padx=(5, 0), pady=2)
+        self.codec_combo.bind('<<ComboboxSelected>>', self.on_codec_changed)
         
         # FPS
         ttk.Label(settings_frame, text="FPS:").grid(row=1, column=0, sticky=tk.W, pady=2)
@@ -452,6 +461,34 @@ class MainWindow:
         # Mostrar dica específica para WebP
         if 'WEBP' in format_selected:
             self.log_message("WebP selecionado: Suporte a animação e transparência disponível")
+        
+        # Validar compatibilidade de codec
+        self._validate_codec_compatibility()
+    
+    def on_codec_changed(self, event=None):
+        """
+        Callback para mudança de codec de vídeo
+        """
+        codec_selected = self.codec_var.get()
+        self.log_message(f"Codec selecionado: {codec_selected}")
+        
+        # Validar compatibilidade com formato
+        self._validate_codec_compatibility()
+    
+    def _validate_codec_compatibility(self):
+        """
+        Valida a compatibilidade entre codec e formato
+        """
+        format_selected = self.format_var.get()
+        codec_selected = self.codec_var.get()
+        
+        # AVI não suporta H.265
+        if 'AVI' in format_selected and 'H.265' in codec_selected:
+            self.codec_var.set("H.264 (Recomendado)")
+            self.codec_combo.config(state="disabled")
+            self.log_message("⚠️ AVI não suporta H.265. Codec alterado para H.264.")
+        else:
+            self.codec_combo.config(state="readonly")
     
     def on_performance_mode_changed(self, event=None):
         """
@@ -564,12 +601,17 @@ class MainWindow:
         performance_mode = PerformanceMode(int(self.performance_mode_var.get()))
         performance_config = PerformanceModeConfig.get_mode_config(performance_mode)
         
+        # Mapear codec da interface para o formato esperado pelo video_converter
+        codec_text = self.codec_var.get()
+        codec = "hevc" if "H.265" in codec_text else "h264"
+        
         settings = {
             'format': self.format_var.get(),
             'quality': self.quality_var.get(),
             'transparency': self.transparency_var.get(),
             'fps': self.fps_var.get(),
             'resolution': self.resolution_var.get(),
+            'codec': codec,
             'performance_mode': performance_mode,
             'performance_config': performance_config
         }
@@ -730,6 +772,7 @@ class MainWindow:
         self.output_dir_var.set("")
         self.format_var.set("MP4")
         self.quality_var.set("Média")
+        self.codec_var.set("H.264 (Recomendado)")
         self.fps_var.set("Original")
         self.resolution_var.set("Original")
         self.transparency_var.set(False)
