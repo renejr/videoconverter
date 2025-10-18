@@ -1,19 +1,50 @@
-# Video Converter
+# 🎬 Video Converter
 
-Um conversor de vídeo simples e eficiente com interface gráfica, desenvolvido em Python usando Tkinter e FFmpeg.
+[![CI/CD Pipeline](https://github.com/renejr/videoconverter/actions/workflows/ci.yml/badge.svg)](https://github.com/renejr/videoconverter/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/renejr/videoconverter/actions/workflows/codeql.yml/badge.svg)](https://github.com/renejr/videoconverter/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://github.com/renejr/videoconverter)
+[![Release](https://img.shields.io/github/v/release/renejr/videoconverter)](https://github.com/renejr/videoconverter/releases)
+[![Downloads](https://img.shields.io/github/downloads/renejr/videoconverter/total)](https://github.com/renejr/videoconverter/releases)
+[![Issues](https://img.shields.io/github/issues/renejr/videoconverter)](https://github.com/renejr/videoconverter/issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/renejr/videoconverter)](https://github.com/renejr/videoconverter/pulls)
+[![Code Size](https://img.shields.io/github/languages/code-size/renejr/videoconverter)](https://github.com/renejr/videoconverter)
+[![Last Commit](https://img.shields.io/github/last-commit/renejr/videoconverter)](https://github.com/renejr/videoconverter/commits/main)
 
-## 🚀 Características
+Um conversor de vídeo moderno e eficiente com interface gráfica intuitiva, suporte completo para **aceleração CUDA/NVENC** e **sistema avançado de modos de performance**.
 
-- **Interface Gráfica Intuitiva**: Interface moderna e fácil de usar desenvolvida com Tkinter
-- **Aceleração por Hardware CUDA**: Suporte completo para NVENC (NVIDIA) com fallback automático para CPU
-- **Detecção Automática de Hardware**: Identifica automaticamente GPUs NVIDIA compatíveis
-- **Múltiplos Formatos**: Suporte para conversão entre diversos formatos de vídeo
-- **Instalação Automática do FFmpeg**: Detecta e instala automaticamente o FFmpeg se necessário
-- **Configurações Avançadas**: Controle de qualidade, FPS, resolução e transparência
-- **Barra de Progresso**: Acompanhamento em tempo real do progresso da conversão
-- **Validação de Entrada**: Verificação automática de arquivos e configurações
-- **Log Detalhado**: Sistema de log para acompanhar o processo de conversão
-- **Fallback Inteligente**: Automaticamente usa CPU se CUDA não estiver disponível
+## 🚀 Características Principais
+
+### 🎯 **Modos de Performance Inteligentes**
+- **ECONÔMICA**: Otimizada para economia de recursos e menor consumo de energia
+- **AUTOMÁTICA**: Detecção automática de hardware com configuração inteligente
+- **PERFORMANCE**: Máxima velocidade utilizando todos os recursos disponíveis
+
+### 🔄 **Sistema de Fila Avançado**
+- **Conversão em Lote**: Processe múltiplos arquivos simultaneamente
+- **Controle de Concorrência**: Gerenciamento inteligente de recursos do sistema
+- **Monitoramento em Tempo Real**: Acompanhe o progresso de cada conversão
+- **Recuperação de Erros**: Sistema robusto de tratamento de falhas
+
+### 💻 **Interface e Usabilidade**
+- **Interface Gráfica Moderna**: Design intuitivo e responsivo com Tkinter
+- **Tooltips Informativos**: Ajuda contextual para cada funcionalidade
+- **Validação de Estados**: Controle inteligente de botões e ações
+- **Feedback Visual**: Indicadores claros de progresso e status
+
+### ⚡ **Performance e Hardware**
+- **Aceleração CUDA/NVENC**: Suporte completo para GPUs NVIDIA
+- **Detecção Automática**: Identifica automaticamente hardware disponível
+- **Fallback Inteligente**: Usa CPU automaticamente quando GPU não disponível
+- **Otimização Adaptativa**: Ajusta configurações baseado no hardware detectado
+
+### 🛠️ **Funcionalidades Técnicas**
+- **Múltiplos Formatos**: Suporte extensivo para formatos de entrada e saída
+- **Instalação Automática**: FFmpeg instalado automaticamente se necessário
+- **Configurações Avançadas**: Controle total sobre qualidade, FPS e resolução
+- **Sistema de Log**: Logging detalhado para debugging e monitoramento
+- **Validação Robusta**: Verificação automática de arquivos e configurações
 
 ## 📋 Requisitos
 
@@ -59,8 +90,30 @@ Um conversor de vídeo simples e eficiente com interface gráfica, desenvolvido 
 ### 1. Seleção de Arquivo
 - Clique em "Procurar" para selecionar o arquivo de vídeo de entrada
 - Formatos suportados: MP4, AVI, MOV, MKV, WMV, FLV, WEBM, M4V, 3GP, ASF, RM, RMVB, VOB, TS, MTS, M2TS
+- **Novo**: Suporte para seleção múltipla de arquivos para conversão em lote
 
-### 2. Configurações de Conversão
+### 2. Modo de Performance
+Escolha o modo que melhor se adapta às suas necessidades:
+
+#### 🟢 **ECONÔMICA**
+- **Ideal para**: Laptops, sistemas com recursos limitados
+- **Características**: Menor uso de CPU/GPU, economia de energia
+- **Velocidade**: Mais lenta, mas eficiente em recursos
+- **Configuração**: 1-2 threads, configurações conservadoras
+
+#### 🔵 **AUTOMÁTICA** (Recomendado)
+- **Ideal para**: Uso geral, detecção automática
+- **Características**: Balanceamento inteligente entre velocidade e recursos
+- **Velocidade**: Otimizada baseada no hardware detectado
+- **Configuração**: Ajuste automático baseado no sistema
+
+#### 🔴 **PERFORMANCE**
+- **Ideal para**: Workstations, sistemas potentes
+- **Características**: Máxima velocidade, uso intensivo de recursos
+- **Velocidade**: Mais rápida possível
+- **Configuração**: Múltiplas threads, aceleração máxima
+
+### 3. Configurações de Conversão
 
 #### Formato de Saída
 Escolha entre os formatos disponíveis:
@@ -108,6 +161,7 @@ Escolha entre os formatos disponíveis:
 vidconv/
 ├── core/                   # Módulos principais
 │   ├── ffmpeg_installer.py # Instalação automática do FFmpeg
+│   ├── queue_manager.py    # Sistema de fila e gerenciamento de conversões
 │   └── video_converter.py  # Motor de conversão com suporte CUDA
 ├── gui/                    # Interface gráfica
 │   ├── main_window.py      # Interface PyQt6 (legacy)
@@ -115,6 +169,7 @@ vidconv/
 ├── utils/                  # Utilitários
 │   ├── config.py          # Configurações centralizadas
 │   ├── hardware_detector.py # Detecção de hardware CUDA
+│   ├── performance_modes.py # Modos de performance e configurações
 │   └── validators.py      # Validação de entrada
 ├── main.py                # Arquivo principal (PyQt6)
 ├── main_tkinter.py        # Arquivo principal da aplicação (Tkinter)
@@ -214,6 +269,16 @@ A aplicação tentará instalar automaticamente o FFmpeg. Se falhar:
 - Considere reduzir a resolução para melhor performance
 
 ## 📝 Log de Alterações
+
+### v2.0.0 (Atual)
+- **🎯 Sistema de Modos de Performance**: ECONÔMICA, AUTOMÁTICA e PERFORMANCE
+- **🔄 Gerenciador de Fila Avançado**: Conversão em lote com controle de concorrência
+- **💻 Interface Aprimorada**: Tooltips informativos e validação de estados
+- **⚡ Otimizações de Performance**: Configurações adaptativas baseadas no hardware
+- **🛠️ Sistema de Callbacks**: Monitoramento em tempo real de progresso
+- **🔧 Arquitetura Modular**: Separação clara entre lógica e interface
+- **📊 Logging Avançado**: Sistema de log detalhado para debugging
+- **🚀 Melhor Experiência do Usuário**: Feedback visual e controle intuitivo
 
 ### v1.0.0
 - Interface gráfica com Tkinter
