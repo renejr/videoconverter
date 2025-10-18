@@ -1,0 +1,147 @@
+# 🚀 VideoConverter - Instalador Universal
+# Dependências necessárias para o instalador inteligente
+
+# === CORE DEPENDENCIES ===
+# Detecção de sistema e hardware
+psutil>=5.9.0              # Informações do sistema, processos, hardware
+platform-detect>=1.0.0    # Detecção avançada de plataforma
+distro>=1.8.0             # Informações de distribuição Linux
+
+# === GPU/CUDA DETECTION ===
+# NVIDIA GPU detection e management
+nvidia-ml-py3>=7.352.0    # NVIDIA Management Library Python bindings
+pynvml>=11.4.1            # Python NVIDIA Management Library
+py3nvml>=0.2.7            # Alternative NVIDIA ML Python bindings
+
+# Windows-specific hardware detection
+pywin32>=306; sys_platform == "win32"     # Windows API access
+wmi>=1.5.1; sys_platform == "win32"       # Windows Management Instrumentation
+
+# === NETWORK & DOWNLOADS ===
+# HTTP requests e downloads
+requests>=2.31.0          # HTTP library
+urllib3>=2.0.0            # HTTP client
+httpx>=0.25.0             # Modern HTTP client
+aiohttp>=3.9.0            # Async HTTP client
+
+# Download utilities
+tqdm>=4.66.0              # Progress bars
+rich>=13.7.0              # Rich text and beautiful formatting
+click>=8.1.0              # Command line interface
+
+# === FILE HANDLING ===
+# Archive extraction
+patool>=1.12.0            # Universal archive extractor
+py7zr>=0.20.0             # 7-Zip archive support
+zipfile38>=0.0.3          # Enhanced zipfile support
+tarfile-modern>=0.1.0     # Modern tarfile support
+
+# File operations
+pathlib2>=2.3.7          # Enhanced pathlib
+send2trash>=1.8.2        # Safe file deletion
+filelock>=3.13.0          # File locking
+
+# === VALIDATION & TESTING ===
+# Process management
+subprocess32>=3.5.4; python_version < "3.3"  # Enhanced subprocess
+psutil>=5.9.0             # Process and system monitoring
+
+# Checksum verification
+hashlib-compat>=1.0.1    # Hash compatibility
+checksumdir>=1.2.0       # Directory checksums
+
+# === LOGGING & MONITORING ===
+# Advanced logging
+colorlog>=6.8.0           # Colored logging
+loguru>=0.7.2             # Modern logging
+structlog>=23.2.0         # Structured logging
+
+# Progress tracking
+alive-progress>=3.1.5    # Animated progress bars
+progressbar2>=4.2.0      # Alternative progress bars
+
+# === CONFIGURATION ===
+# Configuration management
+pyyaml>=6.0.1             # YAML configuration files
+toml>=0.10.2              # TOML configuration files
+configparser>=5.3.0      # INI configuration files
+python-dotenv>=1.0.0     # Environment variables
+
+# === SYSTEM INTEGRATION ===
+# Environment management
+virtualenv>=20.24.0       # Virtual environment creation
+pip>=23.3.0               # Package installer
+
+# Registry access (Windows)
+winreg-kb>=1.0.0; sys_platform == "win32"    # Windows registry
+
+# Package managers (Linux)
+python-apt>=2.4.0; sys_platform == "linux"   # APT package manager
+python-yum>=1.0.0; sys_platform == "linux"   # YUM package manager
+
+# === UTILITIES ===
+# Data structures
+dataclasses>=0.8; python_version < "3.7"     # Backport for older Python
+typing-extensions>=4.8.0  # Extended typing support
+
+# Date/time handling
+python-dateutil>=2.8.2   # Date utilities
+pytz>=2023.3             # Timezone support
+
+# === OPTIONAL DEPENDENCIES ===
+# GUI support (optional)
+tkinter-tooltip>=2.1.0   # Tkinter tooltips
+pillow>=10.1.0            # Image processing
+
+# Advanced features
+cryptography>=41.0.0     # Cryptographic operations
+keyring>=24.3.0          # Secure credential storage
+
+# === DEVELOPMENT DEPENDENCIES ===
+# Testing (for installer validation)
+pytest>=7.4.0            # Testing framework
+pytest-cov>=4.1.0        # Coverage testing
+pytest-mock>=3.12.0      # Mocking for tests
+
+# Code quality
+black>=23.11.0           # Code formatting
+flake8>=6.1.0            # Code linting
+mypy>=1.7.0              # Type checking
+
+# === VERSION CONSTRAINTS ===
+# Ensure compatibility
+setuptools>=68.0.0       # Package building
+wheel>=0.42.0            # Wheel format support
+pip-tools>=7.3.0         # Dependency management
+
+# === PLATFORM-SPECIFIC ===
+# macOS specific
+pyobjc>=10.0; sys_platform == "darwin"       # macOS system integration
+
+# Linux specific  
+python-dbus>=1.3.2; sys_platform == "linux" # D-Bus communication
+pygobject>=3.46.0; sys_platform == "linux"  # GTK/GNOME integration
+
+# === SECURITY ===
+# Secure operations
+certifi>=2023.11.17      # Certificate bundle
+urllib3[secure]>=2.0.0   # Secure HTTP
+requests[security]>=2.31.0  # Secure requests
+
+# === PERFORMANCE ===
+# Performance optimizations
+cython>=3.0.0            # C extensions
+numba>=0.58.0            # JIT compilation
+psutil>=5.9.0            # System monitoring
+
+# === COMPATIBILITY ===
+# Python version compatibility
+importlib-metadata>=6.8.0; python_version < "3.8"
+importlib-resources>=6.1.0; python_version < "3.9"
+backports.zoneinfo>=0.2.1; python_version < "3.9"
+
+# === NOTES ===
+# 1. Algumas dependências são opcionais e serão instaladas conforme necessário
+# 2. Dependências específicas de plataforma são condicionais
+# 3. Versões mínimas garantem compatibilidade e segurança
+# 4. Para instalação mínima, use apenas as dependências CORE
