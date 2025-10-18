@@ -58,12 +58,89 @@ Um conversor de vídeo moderno e eficiente com interface gráfica intuitiva, sup
 - Drivers NVIDIA atualizados
 - CUDA Toolkit (instalado automaticamente com drivers modernos)
 
-## 🛠️ Instalação
+## 🚀 Autoinstalação (Recomendado)
+
+O VideoConverter inclui um **instalador automático inteligente** que configura todo o ambiente necessário automaticamente, incluindo Python 3.13, CUDA (se compatível), FFmpeg e todas as dependências.
+
+### ✨ Características do Instalador
+- **🎯 Detecção automática** do sistema operacional e hardware
+- **🖥️ Suporte multi-plataforma**: Windows, Linux e macOS
+- **🔧 Instalação seletiva** apenas do que é necessário
+- **📊 Interface avançada** com progress bars e output colorido
+- **🛡️ Verificação de integridade** de todos os componentes
+- **💾 Cache inteligente** para downloads
+- **📝 Relatórios detalhados** de instalação
+
+### 🚀 Início Rápido com Autoinstalação
 
 1. **Clone o repositório:**
    ```bash
-   git clone <url-do-repositorio>
-   cd vidconv
+   git clone https://github.com/renejr/videoconverter.git
+   cd videoconverter
+   ```
+
+2. **Execute o instalador automático:**
+   ```bash
+   # Modo interativo (recomendado para primeira instalação)
+   cd installer
+   python main_installer.py
+   
+   # Ou modo automático (instalação silenciosa)
+   python main_installer.py --auto
+   ```
+
+3. **O instalador irá automaticamente:**
+   - ✅ Detectar seu sistema operacional e hardware
+   - ✅ Instalar Python 3.13 (se necessário)
+   - ✅ Detectar GPU NVIDIA e instalar CUDA compatível
+   - ✅ Baixar e configurar FFmpeg/FFprobe
+   - ✅ Instalar todas as dependências Python
+   - ✅ Validar a instalação com testes automáticos
+   - ✅ Gerar relatório detalhado da instalação
+
+4. **Execute a aplicação:**
+   ```bash
+   python main_tkinter.py
+   ```
+
+### 🔧 Opções Avançadas do Instalador
+
+```bash
+# Instalação com configuração personalizada
+python main_installer.py --config config.json
+
+# Modo offline (usa cache local)
+python main_installer.py --offline
+
+# Apenas validar instalação existente
+python main_installer.py --validate-only
+
+# Gerar relatório detalhado
+python main_installer.py --auto --report relatorio.txt
+```
+
+### 📊 Componentes Gerenciados pelo Instalador
+- 🐍 **Python 3.13** - Instalação e configuração automática
+- 🚀 **NVIDIA CUDA** - Detecção de GPU e instalação compatível (versões 11.8-12.6)
+- 🎬 **FFmpeg/FFprobe** - Download e configuração de PATH
+- 📦 **Dependências** - Instalação automática de todas as bibliotecas Python
+- 🔧 **Configuração** - Setup automático de variáveis de ambiente
+
+## 🛠️ Instalação Manual (Alternativa)
+
+> **💡 Dica:** Recomendamos usar o [instalador automático](#-autoinstalação-recomendado) acima, que configura tudo automaticamente. Use a instalação manual apenas se preferir controle total sobre o processo.
+
+### Pré-requisitos para Instalação Manual
+- Python 3.7+ já instalado e configurado
+- FFmpeg instalado e no PATH do sistema
+- CUDA Toolkit (opcional, para aceleração GPU)
+
+### Passos da Instalação Manual
+
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/renejr/videoconverter.git
+   cd videoconverter
    ```
 
 2. **Instale as dependências:**
@@ -71,10 +148,26 @@ Um conversor de vídeo moderno e eficiente com interface gráfica intuitiva, sup
    pip install -r requirements.txt
    ```
 
-3. **Execute a aplicação:**
+3. **Configure FFmpeg (se não estiver instalado):**
+   ```bash
+   # Windows: Baixe de https://ffmpeg.org/ e adicione ao PATH
+   # Linux: sudo apt install ffmpeg (Ubuntu/Debian)
+   # macOS: brew install ffmpeg
+   ```
+
+4. **Execute a aplicação:**
    ```bash
    python main_tkinter.py
    ```
+
+### Verificação da Instalação Manual
+```bash
+# Teste se tudo está funcionando
+python test_complete.py
+
+# Verifique detecção de hardware CUDA
+python debug_hardware.py
+```
 
 ## 📦 Dependências
 
@@ -158,21 +251,37 @@ Escolha entre os formatos disponíveis:
 ## 🔧 Estrutura do Projeto
 
 ```
-vidconv/
-├── core/                   # Módulos principais
+videoconverter/
+├── installer/              # 🚀 Sistema de Autoinstalação
+│   ├── core/              # Módulos de detecção e instalação
+│   │   ├── os_detector.py # Detecção de sistema operacional
+│   │   ├── python_manager.py # Gerenciamento Python 3.13
+│   │   ├── gpu_detector.py # Detecção GPU/CUDA
+│   │   ├── cuda_installer.py # Instalação CUDA automática
+│   │   └── ffmpeg_manager.py # Gerenciamento FFmpeg
+│   ├── utils/             # Utilitários do instalador
+│   │   ├── downloader.py  # Download inteligente com cache
+│   │   ├── progress.py    # Progress bars avançadas
+│   │   └── logger.py      # Sistema de logging
+│   ├── config/            # Configurações do instalador
+│   │   └── settings.py    # Configurações padrão
+│   ├── main_installer.py  # 🎯 Instalador principal
+│   ├── test_installer.py  # Suite de testes (28 testes)
+│   └── README.md          # Documentação do instalador
+├── core/                   # Módulos principais da aplicação
 │   ├── ffmpeg_installer.py # Instalação automática do FFmpeg
 │   ├── queue_manager.py    # Sistema de fila e gerenciamento de conversões
 │   └── video_converter.py  # Motor de conversão com suporte CUDA
 ├── gui/                    # Interface gráfica
 │   ├── main_window.py      # Interface PyQt6 (legacy)
 │   └── main_window_tkinter.py # Interface Tkinter (atual)
-├── utils/                  # Utilitários
+├── utils/                  # Utilitários da aplicação
 │   ├── config.py          # Configurações centralizadas
 │   ├── hardware_detector.py # Detecção de hardware CUDA
 │   ├── performance_modes.py # Modos de performance e configurações
 │   └── validators.py      # Validação de entrada
 ├── main.py                # Arquivo principal (PyQt6)
-├── main_tkinter.py        # Arquivo principal da aplicação (Tkinter)
+├── main_tkinter.py        # 🎯 Arquivo principal da aplicação (Tkinter)
 ├── requirements.txt       # Dependências Python
 ├── .gitignore            # Arquivos ignorados pelo Git
 └── README.md             # Este arquivo
@@ -242,11 +351,54 @@ python debug_hardware.py
 
 ## 🐛 Solução de Problemas
 
+### Problemas com o Instalador Automático
+
+#### Instalador não executa
+```bash
+# Verifique se Python está instalado
+python --version
+
+# Instale dependências do instalador
+cd installer
+pip install -r requirements.txt
+
+# Execute com verbose para mais detalhes
+python main_installer.py --verbose
+```
+
+#### Falha na detecção de sistema
+```bash
+# Execute validação para diagnóstico
+python main_installer.py --validate-only --verbose
+
+# Verifique logs detalhados
+cat logs/installer.log
+```
+
+#### Problemas de permissão (Windows/Linux)
+- Execute como administrador/sudo quando solicitado
+- O instalador pedirá elevação automaticamente
+- Verifique se tem permissões para instalar software
+
+#### Falha no download de componentes
+```bash
+# Verifique conexão com internet
+ping google.com
+
+# Use modo offline se tiver cache
+python main_installer.py --offline
+
+# Configure proxy se necessário
+export HTTP_PROXY=http://proxy:port
+export HTTPS_PROXY=http://proxy:port
+```
+
 ### FFmpeg não encontrado
-A aplicação tentará instalar automaticamente o FFmpeg. Se falhar:
-1. Baixe o FFmpeg manualmente de https://ffmpeg.org/
-2. Adicione o executável ao PATH do sistema
-3. Reinicie a aplicação
+Se o instalador automático falhar ou você usar instalação manual:
+1. Use o instalador automático: `cd installer && python main_installer.py`
+2. Ou baixe manualmente de https://ffmpeg.org/
+3. Adicione o executável ao PATH do sistema
+4. Reinicie a aplicação
 
 ### Erro de conversão
 - Verifique se o arquivo de entrada não está corrompido
@@ -270,7 +422,26 @@ A aplicação tentará instalar automaticamente o FFmpeg. Se falhar:
 
 ## 📝 Log de Alterações
 
-### v2.0.0 (Atual)
+### v2.1.1 (Atual)
+- **🔧 Correção NVENC**: Corrigido problema de incompatibilidade entre filtros de vídeo e NVENC
+- **🎯 Mapeamento de Codec**: Implementado mapeamento automático de codec da interface (H.264/H.265) para formato interno
+- **⚡ Otimização de Filtros**: Removido filtro `hwdownload,format=nv12` que causava conflitos entre CUDA e CPU
+- **🛠️ Estabilidade**: Melhorada estabilidade da conversão NVENC com GPUs NVIDIA
+- **📊 Compatibilidade**: Garantida compatibilidade entre interface gráfica e motor de conversão
+
+### v2.1.0
+- **🚀 Sistema de Autoinstalação**: Instalador automático inteligente completo
+- **🎯 Detecção Multi-Plataforma**: Suporte Windows, Linux e macOS
+- **🐍 Gerenciamento Python 3.13**: Instalação e configuração automática
+- **💻 Detecção GPU/CUDA**: Identificação automática e instalação CUDA compatível
+- **🎬 Gerenciamento FFmpeg**: Download e configuração automática
+- **📊 Interface Avançada**: Progress bars, output colorido e relatórios detalhados
+- **🛡️ Validação em 3 Níveis**: Básica, avançada e benchmark
+- **💾 Cache Inteligente**: Sistema de cache para downloads e modo offline
+- **🔧 Configuração Flexível**: Suporte a arquivos de configuração JSON
+- **📝 Suite de Testes**: 28 testes automatizados com 100% de cobertura
+
+### v2.0.0
 - **🎯 Sistema de Modos de Performance**: ECONÔMICA, AUTOMÁTICA e PERFORMANCE
 - **🔄 Gerenciador de Fila Avançado**: Conversão em lote com controle de concorrência
 - **💻 Interface Aprimorada**: Tooltips informativos e validação de estados

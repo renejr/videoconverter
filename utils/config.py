@@ -38,6 +38,47 @@ WEBP_QUALITY_PRESETS = {
     'Muito Alta': {'quality': 100, 'method': 6}
 }
 
+# Configurações específicas para AVI
+AVI_QUALITY_PRESETS = {
+    'Baixa': {
+        'crf': 26,  # Ligeiramente melhor que o padrão
+        'preset': 'fast',
+        'profile': 'main',
+        'level': '3.1',
+        'tune': 'film'
+    },
+    'Média': {
+        'crf': 21,  # Melhor qualidade que o padrão
+        'preset': 'medium',
+        'profile': 'main',
+        'level': '4.0',
+        'tune': 'film'
+    },
+    'Alta': {
+        'crf': 16,  # Qualidade superior
+        'preset': 'slow',
+        'profile': 'high',
+        'level': '4.1',
+        'tune': 'film'
+    },
+    'Muito Alta': {
+        'crf': 13,  # Qualidade máxima
+        'preset': 'veryslow',
+        'profile': 'high',
+        'level': '4.1',
+        'tune': 'film'
+    }
+}
+
+# Configurações de áudio específicas para AVI
+AVI_AUDIO_CONFIG = {
+    'codec': 'mp3',
+    'bitrate': '192k',  # Bitrate otimizado para MP3
+    'sample_rate': '44100',
+    'channels': 2,
+    'quality': 2  # Qualidade VBR para MP3 (0=melhor, 9=pior)
+}
+
 # Configurações de FPS
 FPS_OPTIONS = ['Original', '24', '25', '30', '50', '60', 'Personalizado']
 
