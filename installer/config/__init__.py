@@ -10,6 +10,4 @@ Configurações do instalador:
 
 from .settings import InstallerSettings
 
-__all__ = [
-    "InstallerSettings"
-]
+__all__ = ["InstallerSettings"]

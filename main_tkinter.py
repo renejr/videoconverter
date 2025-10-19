@@ -18,17 +18,17 @@ def main():
         # Criar aplicação Tkinter
         root = tk.Tk()
         app = MainWindow(root)
-        
+
         # Configurar fechamento da aplicação
         def on_closing():
             if messagebox.askokcancel("Sair", "Deseja realmente sair da aplicação?"):
                 root.destroy()
-        
+
         root.protocol("WM_DELETE_WINDOW", on_closing)
-        
+
         # Iniciar loop principal
         root.mainloop()
-        
+
     except Exception as e:
         messagebox.showerror("Erro", f"Erro ao iniciar a aplicação: {str(e)}")
         sys.exit(1)
