@@ -422,7 +422,14 @@ Se o instalador automático falhar ou você usar instalação manual:
 
 ## 📝 Log de Alterações
 
-### v2.1.1 (Atual)
+### v2.1.2 (Atual)
+- **🎬 Correção Crítica GIF**: Resolvido problema de erro no FFmpeg com arquivos GIF contendo "(Animado)" no nome
+- **🔧 Limpeza de Nomes**: Implementada limpeza automática de caracteres problemáticos em nomes de arquivos GIF
+- **📁 Normalização de Extensões**: Conversão automática de ".GIF" maiúsculo para ".gif" minúsculo
+- **🛠️ Robustez**: Melhorada estabilidade na conversão de arquivos GIF com nomes especiais
+- **📊 Logging Aprimorado**: Adicionado log específico para correções de nomes de arquivos GIF
+
+### v2.1.1
 - **🔧 Correção NVENC**: Corrigido problema de incompatibilidade entre filtros de vídeo e NVENC
 - **🎯 Mapeamento de Codec**: Implementado mapeamento automático de codec da interface (H.264/H.265) para formato interno
 - **⚡ Otimização de Filtros**: Removido filtro `hwdownload,format=nv12` que causava conflitos entre CUDA e CPU

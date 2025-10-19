@@ -502,7 +502,13 @@ class ConversionQueueManager:
                 self.global_callbacks['job_status'](job.id, status)
         
         def on_finished(success, message):
+            # Primeiro processar no queue manager (atualiza status, estatísticas, etc.)
             self._handle_job_completion(job, success, message)
+            
+            # Depois chamar callback individual da GUI com parâmetros adaptados
+            if 'job_finished' in job.callbacks:
+                output_file = job.output_file if success else None
+                job.callbacks['job_finished'](job.id, success, message, output_file)
         
         def on_log(message):
             if 'log' in job.callbacks:

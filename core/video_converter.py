@@ -8,12 +8,15 @@ import subprocess
 import threading
 import time
 import re
+import uuid
 from pathlib import Path
 
 from utils.config import (SUPPORTED_INPUT_FORMATS, QUALITY_PRESETS, 
                          RESOLUTION_PRESETS, FFMPEG_TIMEOUT, FFMPEG_PROGRESS_REGEX,
                          get_hardware_config, NVENC_QUALITY_PRESETS, NVENC_CODEC_SETTINGS,
-                         AVI_QUALITY_PRESETS, AVI_AUDIO_CONFIG)
+                         AVI_QUALITY_PRESETS, AVI_AUDIO_CONFIG, GIF_QUALITY_PRESETS,
+                         GIF_FPS_OPTIONS, GIF_COLOR_OPTIONS, GIF_RESOLUTION_PRESETS,
+                         FRAME_EXTRACTION_FORMATS, FRAME_EXTRACTION_MODES, WEBP_FRAME_PRESETS)
 from utils.validators import (validate_input_file, validate_output_directory,
                              validate_conversion_settings, generate_output_filename)
 from .ffmpeg_installer import FFmpegInstaller
@@ -180,9 +183,15 @@ class VideoConverter(threading.Thread):
                     # FPS
                     fps_str = stream.get('r_frame_rate', '0/1')
                     if '/' in fps_str:
-                        num, den = fps_str.split('/')
-                        if int(den) > 0:
-                            video_info['fps'] = round(int(num) / int(den), 2)
+                        fps_parts = fps_str.split('/')
+                        if len(fps_parts) == 2:
+                            try:
+                                num, den = fps_parts
+                                if int(den) > 0:
+                                    video_info['fps'] = round(int(num) / int(den), 2)
+                            except (ValueError, TypeError) as e:
+                                self._call_callback('log', f"Erro ao processar FPS '{fps_str}': {str(e)}")
+                                video_info['fps'] = 0
                 
                 elif stream.get('codec_type') == 'audio':
                     video_info['has_audio'] = True
@@ -205,6 +214,14 @@ class VideoConverter(threading.Thread):
 
         cmd = [ffmpeg_cmd]
         
+        # Verificar se é GIF ou extração de frames
+        format_name = self.conversion_settings.get('format', '')
+        
+        if 'GIF (Animado)' in format_name:
+            return self.build_gif_command(cmd)
+        elif 'Extração de Frames' in format_name:
+            return self.build_frame_extraction_command(cmd)
+        
         # Configurações de decodificação CUDA (se disponível)
         self.add_cuda_decoder_settings(cmd)
         
@@ -222,6 +239,213 @@ class VideoConverter(threading.Thread):
         
         # Arquivo de saída
         cmd.append(self.output_file)
+        
+        return cmd
+    
+    def build_gif_command(self, cmd):
+        """
+        Constrói comando FFmpeg específico para exportação de GIF animado
+        Implementa processo otimizado com filtros complexos para alta qualidade
+
+        Args:
+            cmd: Lista base do comando FFmpeg
+
+        Returns:
+            list: Comando FFmpeg completo para GIF
+        """
+        settings = self.conversion_settings
+        gif_settings = settings.get('gif_settings', {})
+
+        # LOG DETALHADO: Diagnóstico de processamento de GIF
+        self._call_callback('log', "🔍 DIAGNÓSTICO GIF: Iniciando construção do comando")
+        self._call_callback('log', f"🔍 Configurações GIF: {gif_settings}")
+        self._call_callback('log', f"🔍 Arquivo de entrada: {self.input_file}")
+
+        # Verificar se arquivo de entrada existe e tamanho
+        if os.path.exists(self.input_file):
+            file_size = os.path.getsize(self.input_file) / (1024 * 1024)  # MB
+            self._call_callback('log', f"🔍 Tamanho do arquivo de entrada: {file_size:.1f} MB")
+            if file_size > 100:  # Arquivos maiores que 100MB podem causar problemas
+                self._call_callback('log', "🚨 AVISO: Arquivo grande detectado - pode causar alto consumo de memória")
+        else:
+            self._call_callback('log', "🚨 ERRO: Arquivo de entrada não encontrado!")
+
+        # Arquivo de entrada
+        cmd.extend(['-i', self.input_file])
+        
+        # Configurações de FPS
+        gif_fps = gif_settings.get('fps', '15')
+        
+        # Configurações de resolução máxima
+        max_resolution = gif_settings.get('max_resolution', '480p')
+        
+        # Configurações de qualidade e cores
+        quality = gif_settings.get('quality', 'Média')
+        colors = gif_settings.get('colors', '256')
+        dithering = gif_settings.get('dithering', True)
+        optimization = gif_settings.get('optimization', True)
+        
+        # Construir filtros de vídeo
+        filters = []
+        
+        # Filtro de FPS
+        if gif_fps != 'Original':
+            filters.append(f"fps={gif_fps}")
+        
+        # Filtro de resolução
+        if max_resolution != 'Original' and max_resolution in GIF_RESOLUTION_PRESETS:
+            width, height = GIF_RESOLUTION_PRESETS[max_resolution]
+            scale_filter = f"scale='min({width},iw)':'min({height},ih)':force_original_aspect_ratio=decrease"
+            filters.append(scale_filter)
+        
+        # Configurações de paleta baseadas na qualidade
+        palette_options = f"max_colors={colors}"
+        if quality in GIF_QUALITY_PRESETS:
+            preset = GIF_QUALITY_PRESETS[quality]
+            if dithering and preset.get('dithering', True):
+                palette_options += ":stats_mode=diff"
+            else:
+                palette_options += ":stats_mode=single"
+        
+        # Usar filtro complexo para processo de duas etapas otimizado
+        # Isso gera a paleta e aplica em uma única passagem
+        complex_filter = ""
+        if filters:
+            # Aplicar filtros de pré-processamento
+            complex_filter = f"[0:v]{','.join(filters)}[v];"
+            # Gerar paleta a partir do vídeo processado
+            complex_filter += f"[v]palettegen={palette_options}[p];"
+            # Aplicar paleta ao vídeo processado
+            dither_option = "floyd_steinberg" if dithering else "none"
+            complex_filter += f"[v][p]paletteuse=dither={dither_option}"
+        else:
+            # Sem filtros de pré-processamento
+            complex_filter = f"[0:v]palettegen={palette_options}[p];"
+            dither_option = "floyd_steinberg" if dithering else "none"
+            complex_filter += f"[0:v][p]paletteuse=dither={dither_option}"
+        
+        cmd.extend(['-filter_complex', complex_filter])
+        
+        # Configurações de otimização
+        if optimization:
+            cmd.extend(['-loop', '0'])  # Loop infinito
+        
+        # Configurações gerais
+        cmd.extend(['-y'])  # Sobrescrever arquivo de saída
+        
+        # CORREÇÃO CRÍTICA: Limpar nome do arquivo de saída para GIF
+        # Remover caracteres problemáticos que causam erro no FFmpeg
+        output_file_clean = self.output_file
+        if '(Animado)' in output_file_clean:
+            # Substituir (Animado) por extensão .gif limpa
+            output_file_clean = output_file_clean.replace('(Animado)', '').replace('.GIF', '.gif')
+            # Remover espaços extras e múltiplos espaços
+            output_file_clean = ' '.join(output_file_clean.split()).strip()
+            # Garantir extensão correta
+            if not output_file_clean.endswith('.gif'):
+                output_file_clean = output_file_clean.rsplit('.', 1)[0] + '.gif'
+            self._call_callback('log', f"🔧 CORREÇÃO CRÍTICA GIF: Nome limpo - {output_file_clean}")
+        
+        # Arquivo de saída
+        cmd.append(output_file_clean)
+        
+        return cmd
+    
+    def build_frame_extraction_command(self, cmd):
+        """
+        Constrói comando FFmpeg específico para extração de frames
+
+        Args:
+            cmd: Lista base do comando FFmpeg
+
+        Returns:
+            list: Comando FFmpeg completo para extração de frames
+        """
+        settings = self.conversion_settings
+        frame_settings = settings.get('frame_settings', {})
+
+        # LOG DETALHADO: Diagnóstico de extração de frames
+        self._call_callback('log', "🔍 DIAGNÓSTICO FRAMES: Iniciando construção do comando")
+        self._call_callback('log', f"🔍 Configurações de frames: {frame_settings}")
+        self._call_callback('log', f"🔍 Arquivo de entrada: {self.input_file}")
+
+        # Verificar se arquivo de entrada existe e obter informações básicas
+        if os.path.exists(self.input_file):
+            file_size = os.path.getsize(self.input_file) / (1024 * 1024)  # MB
+            self._call_callback('log', f"🔍 Tamanho do arquivo de entrada: {file_size:.1f} MB")
+
+            # Obter informações do vídeo para estimar quantidade de frames
+            video_info = self.get_video_info(self.input_file)
+            if video_info:
+                duration = video_info.get('duration', 0)
+                fps = video_info.get('fps', 0)
+                if duration and fps:
+                    estimated_frames = int(duration * fps)
+                    self._call_callback('log', f"🔍 Duração: {duration:.1f}s, FPS: {fps}, Frames estimados: {estimated_frames}")
+
+                    # Avisos para operações potencialmente problemáticas
+                    if estimated_frames > 10000:  # Mais de 10k frames
+                        self._call_callback('log', "🚨 AVISO: Muitos frames estimados - pode causar alto consumo de disco e memória")
+                    if duration > 300:  # Vídeos muito longos
+                        self._call_callback('log', "🚨 AVISO: Vídeo muito longo - operação pode demorar muito tempo")
+        else:
+            self._call_callback('log', "🚨 ERRO: Arquivo de entrada não encontrado!")
+
+        # Arquivo de entrada
+        cmd.extend(['-i', self.input_file])
+        
+        # Configurações do formato de saída
+        frame_format = frame_settings.get('format', 'JPG')
+        extraction_mode = frame_settings.get('mode', 'Todos os Frames')
+        quality = frame_settings.get('quality', 95)
+        
+        # Configurações específicas do modo de extração
+        if extraction_mode == 'Intervalo Regular':
+            interval = frame_settings.get('interval', 1)
+            cmd.extend(['-vf', f'select=not(mod(n\\,{interval}))'])
+            cmd.extend(['-vsync', 'vfr'])
+        elif extraction_mode == 'Frames Específicos':
+            specific_frames = frame_settings.get('specific_frames', '1,10,20')
+            # Converter string para lista de números
+            frame_numbers = [int(f.strip()) for f in specific_frames.split(',') if f.strip().isdigit()]
+            if frame_numbers:
+                # Criar filtro select para frames específicos
+                select_expr = '+'.join([f'eq(n\\,{n-1})' for n in frame_numbers])  # n é 0-indexado
+                cmd.extend(['-vf', f'select={select_expr}'])
+                cmd.extend(['-vsync', 'vfr'])
+        # Para 'Todos os Frames', não adicionar filtros especiais
+        
+        # Configurações de qualidade baseadas no formato
+        if frame_format == 'JPG':
+            cmd.extend(['-q:v', str(int(quality/10))])  # Converter 0-100 para 1-10
+        elif frame_format == 'PNG':
+            # PNG é lossless, não precisa de qualidade
+            pass
+        elif frame_format == 'WebP':
+            cmd.extend(['-quality', str(quality)])
+            # Suporte a transparência para WebP
+            if settings.get('transparency', False):
+                cmd.extend(['-pix_fmt', 'yuva420p'])
+        elif frame_format == 'TIFF':
+            cmd.extend(['-compression_algo', 'lzw'])  # Compressão LZW para TIFF
+        
+        # Configurar padrão de nomenclatura dos arquivos
+        output_dir = os.path.dirname(self.output_file)
+        video_name = os.path.splitext(os.path.basename(self.input_file))[0]
+        
+        # Criar pasta automática se configurado
+        if frame_settings.get('auto_folder', True):
+            frame_folder = os.path.join(output_dir, f"{video_name}_frames")
+            os.makedirs(frame_folder, exist_ok=True)
+            output_pattern = os.path.join(frame_folder, f"{video_name}_frame_%04d.{frame_format.lower()}")
+        else:
+            output_pattern = os.path.join(output_dir, f"{video_name}_frame_%04d.{frame_format.lower()}")
+        
+        # Configurações gerais
+        cmd.extend(['-y'])  # Sobrescrever arquivos de saída
+        
+        # Padrão de saída
+        cmd.append(output_pattern)
         
         return cmd
     
@@ -290,9 +514,10 @@ class VideoConverter(threading.Thread):
             selected_codec = settings.get('codec', 'h264')
             
             # Verificar se o formato suporta codecs específicos
-            if 'VP9' in format_name:
-                # VP9 não tem suporte NVENC, usar CPU
+            if 'VP9' in format_name or 'WEBM' in format_name.upper() or 'WebM' in format_name:
+                # VP9/WEBM não tem suporte NVENC, usar CPU com VP9
                 self.add_cpu_video_settings(cmd, 'vp9')
+                self._call_callback('log', f"🔧 CORREÇÃO WEBM: Usando codec VP9 para formato {format_name}")
             elif 'WEBP' in format_name:
                 # WebP não tem suporte NVENC, usar CPU
                 self.add_cpu_video_settings(cmd, 'webp')
@@ -578,7 +803,21 @@ class VideoConverter(threading.Thread):
         """
         try:
             self._call_callback('status', "Iniciando conversão...")
-            self._call_callback('log', f"Convertendo: {os.path.basename(self.input_file)}")
+            self._call_callback('log', f"🔍 DIAGNÓSTICO RUN: Iniciando conversão")
+            self._call_callback('log', f"🔍 Arquivo: {os.path.basename(self.input_file)}")
+            self._call_callback('log', f"🔍 Formato: {self.conversion_settings.get('format', 'N/A')}")
+            self._call_callback('log', f"🔍 Thread ID: {threading.get_ident()}")
+
+            # CORREÇÃO: Verificar se é operação problemática e adicionar proteções
+            format_name = self.conversion_settings.get('format', '')
+            if 'GIF (Animado)' in format_name or 'Extração de Frames' in format_name:
+                self._call_callback('log', "🛡️ CORREÇÃO: Operação de risco detectada - aplicando proteções adicionais")
+
+                # Verificar tamanho do arquivo e adicionar timeout específico
+                if os.path.exists(self.input_file):
+                    file_size_mb = os.path.getsize(self.input_file) / (1024 * 1024)
+                    if file_size_mb > 500:  # Arquivos maiores que 500MB
+                        self._call_callback('log', "⚠️ Arquivo muito grande detectado - operação pode demorar")
             
             # Obter informações do vídeo para calcular progresso
             video_info = self.get_video_info(self.input_file)
@@ -588,11 +827,20 @@ class VideoConverter(threading.Thread):
             cmd = self.build_ffmpeg_command()
             self._call_callback('log', f"Comando FFmpeg: {' '.join(cmd)}")
             
+            # CORREÇÃO: Timeout específico baseado no tipo de operação
+            timeout_base = 300  # 5 minutos padrão
+            if 'GIF (Animado)' in format_name:
+                timeout_base = 600  # 10 minutos para GIF
+                self._call_callback('log', "⏱️ Timeout aumentado para 10 minutos (operação GIF)")
+            elif 'Extração de Frames' in format_name:
+                timeout_base = 900  # 15 minutos para extração de frames
+                self._call_callback('log', "⏱️ Timeout aumentado para 15 minutos (extração de frames)")
+
             # Executar conversão
             self._call_callback('log', f"Executando FFmpeg no diretório: {os.getcwd()}")
             self._call_callback('log', f"Arquivo de entrada existe: {os.path.exists(self.input_file)}")
             self._call_callback('log', f"Diretório de saída existe: {os.path.exists(os.path.dirname(self.output_file))}")
-            
+
             try:
                 self.process = subprocess.Popen(
                     cmd,
@@ -770,13 +1018,23 @@ class VideoConverter(threading.Thread):
     def monitor_progress(self, total_duration):
         """
         Monitora o progresso da conversão através da saída do FFmpeg
-        
+
         Args:
             total_duration: Duração total do vídeo em segundos
         """
         if not self.process or total_duration <= 0:
-            self._call_callback('log', f"Monitor de progresso: processo={self.process is not None}, duração={total_duration}")
+            self._call_callback('log', f"🔍 DIAGNÓSTICO MONITOR: processo={self.process is not None}, duração={total_duration}")
             return
+
+        # CORREÇÃO: Verificação de segurança para operações críticas
+        format_name = self.conversion_settings.get('format', '')
+        if 'GIF (Animado)' in format_name or 'Extração de Frames' in format_name:
+            self._call_callback('log', "🛡️ MONITORAMENTO REFORÇADO: Operação crítica detectada")
+
+        # LOG DETALHADO: Diagnóstico do monitoramento de progresso
+        self._call_callback('log', "🔍 DIAGNÓSTICO MONITOR: Iniciando monitoramento de progresso")
+        self._call_callback('log', f"🔍 Processo PID: {self.process.pid}")
+        self._call_callback('log', f"🔍 Duração total: {total_duration}s")
         
         # Padrões regex para extrair tempo atual da saída do FFmpeg
         time_patterns = [
@@ -912,6 +1170,12 @@ class VideoConverterManager:
                 'MP4 (H.265)': '.mp4'
             })
         
+        # Adicionar novos formatos especiais
+        formats['output'].update({
+            'GIF (Animado)': '.gif',
+            'Extração de Frames': '.jpg'  # Extensão padrão, será sobrescrita dinamicamente
+        })
+        
         return formats
 
     def get_max_concurrent_jobs(self, settings):
@@ -981,16 +1245,27 @@ class VideoConverterManager:
         is_valid, _ = validate_input_file(file_path)
         return is_valid
     
-    def get_output_extension(self, format_name):
+    def get_output_extension(self, format_name, frame_format=None):
         """
         Retorna a extensão para o formato de saída
         
         Args:
             format_name: Nome do formato (ex: "MP4 (H.264)")
+            frame_format: Formato específico para extração de frames (JPG, PNG, WebP, TIFF)
             
         Returns:
             str: Extensão do arquivo
         """
+        # Para extração de frames, usar o formato específico selecionado
+        if 'Extração de Frames' in format_name and frame_format:
+            frame_extensions = {
+                'JPG': '.jpg',
+                'PNG': '.png', 
+                'WebP': '.webp',
+                'TIFF': '.tiff'
+            }
+            return frame_extensions.get(frame_format, '.jpg')
+        
         return self.supported_formats['output'].get(format_name, '.mp4')
     
     def start_conversion(self, input_file, output_dir, settings, callbacks):
@@ -1037,11 +1312,39 @@ class VideoConverterManager:
         self.cancel_conversion()
         
         # Gerar nome do arquivo de saída
-        output_filename = generate_output_filename(
-            input_file, 
-            settings.get('format', 'MP4 (H.264)').lower(),
-            "converted"
-        )
+        format_name = settings.get('format', 'MP4 (H.264)')
+        
+        # Obter extensão correta baseada no formato
+        extension = self.get_output_extension(format_name)
+        if extension.startswith('.'):
+            extension = extension[1:]  # Remover o ponto inicial
+
+        # CORREÇÃO: Evitar dupla extensão para formatos especiais
+        if 'Extração de Frames' in format_name:
+            # Para extração de frames, usar apenas o formato específico
+            frame_extension = self.get_output_extension(format_name, settings.get('frame_extraction_settings', {}).get('format'))
+            if frame_extension.startswith('.'):
+                frame_extension = frame_extension[1:]
+            extension = frame_extension
+
+        # CORREÇÃO CRÍTICA: Problema de nomenclatura GIF identificado
+        # O FFmpeg não consegue processar nomes de arquivo com espaços e caracteres especiais
+        if 'GIF (Animado)' in format_name:
+            # Para GIF, usar sempre extensão .gif simples, sem espaços ou caracteres especiais
+            extension = 'gif'
+            # Gerar nome único sem caracteres problemáticos usando UUID
+            input_path = Path(input_file)
+            unique_id = str(uuid.uuid4()).replace('-', '')[:8]  # 8 caracteres únicos
+            output_filename = f"{input_path.stem}_gif_{unique_id}.gif"
+            self._call_callback('log', f"🔧 CORREÇÃO APLICADA: Nome do arquivo GIF corrigido - {output_filename}")
+            self._call_callback('log', f"🔧 DEBUG: format_name='{format_name}', input_file='{input_file}'")
+        else:
+            output_filename = generate_output_filename(
+                input_file,
+                extension,
+                "converted"
+            )
+            self._call_callback('log', f"🔧 DEBUG: Formato normal - {format_name}, output_filename='{output_filename}'")
         output_file = Path(output_dir) / output_filename
         
         # Criar thread de conversão

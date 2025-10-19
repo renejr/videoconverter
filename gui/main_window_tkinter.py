@@ -11,7 +11,10 @@ from pathlib import Path
 from core.video_converter import VideoConverterManager
 from core.queue_manager import ConversionQueueManager
 from core.ffmpeg_installer import FFmpegInstaller
-from utils.config import (SUPPORTED_OUTPUT_FORMATS, FPS_OPTIONS, RESOLUTION_PRESETS)
+from utils.config import (SUPPORTED_OUTPUT_FORMATS, FPS_OPTIONS, RESOLUTION_PRESETS,
+                         GIF_QUALITY_PRESETS, GIF_FPS_OPTIONS, GIF_COLOR_OPTIONS,
+                         GIF_RESOLUTION_PRESETS, FRAME_EXTRACTION_FORMATS,
+                         FRAME_EXTRACTION_MODES, WEBP_FRAME_PRESETS)
 from utils.validators import validate_input_file, validate_output_directory
 from utils.performance_modes import (PerformanceMode, PerformanceModeConfig, 
                                    get_performance_mode_labels, get_performance_mode_tooltips)
@@ -230,9 +233,13 @@ class MainWindow:
                                                  variable=self.transparency_var, state="disabled")
         self.transparency_check.grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=5)
         
+        # Seções específicas para GIF e Extração de Frames
+        self.create_gif_settings_section(settings_frame)
+        self.create_frame_extraction_section(settings_frame)
+        
         # Prioridade de Performance
         priority_frame = ttk.LabelFrame(settings_frame, text="Prioridade de Processamento", padding="5")
-        priority_frame.grid(row=4, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=(10, 5))
+        priority_frame.grid(row=7, column=0, columnspan=4, sticky=(tk.W, tk.E), pady=(10, 5))
         priority_frame.columnconfigure(1, weight=1)
         
         # Variável para o slider de prioridade
@@ -263,6 +270,119 @@ class MainWindow:
         self.current_mode_label.grid(row=1, column=0, columnspan=3, pady=(5, 0))
         
         # Tooltips serão configurados após criação de todos os widgets
+    
+    def create_gif_settings_section(self, parent):
+        """
+        Cria a seção de configurações específicas para GIF animado
+        """
+        # Frame para configurações de GIF (inicialmente oculto)
+        self.gif_frame = ttk.LabelFrame(parent, text="Configurações de GIF Animado", padding="5")
+        self.gif_frame.grid(row=4, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=5)
+        self.gif_frame.columnconfigure(1, weight=1)
+        self.gif_frame.columnconfigure(3, weight=1)
+        self.gif_frame.columnconfigure(5, weight=1)
+        self.gif_frame.grid_remove()  # Ocultar inicialmente
+        
+        # Qualidade do GIF
+        ttk.Label(self.gif_frame, text="Qualidade GIF:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        self.gif_quality_var = tk.StringVar(value="Média")
+        self.gif_quality_combo = ttk.Combobox(self.gif_frame, textvariable=self.gif_quality_var,
+                                             values=list(GIF_QUALITY_PRESETS.keys()), state="readonly")
+        self.gif_quality_combo.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(5, 10), pady=2)
+        
+        # FPS do GIF
+        ttk.Label(self.gif_frame, text="FPS GIF:").grid(row=0, column=2, sticky=tk.W, pady=2)
+        self.gif_fps_var = tk.StringVar(value="15")
+        self.gif_fps_combo = ttk.Combobox(self.gif_frame, textvariable=self.gif_fps_var,
+                                         values=GIF_FPS_OPTIONS, state="readonly")
+        self.gif_fps_combo.grid(row=0, column=3, sticky=(tk.W, tk.E), padx=(5, 10), pady=2)
+        
+        # Cores do GIF
+        ttk.Label(self.gif_frame, text="Cores:").grid(row=0, column=4, sticky=tk.W, pady=2)
+        self.gif_colors_var = tk.StringVar(value="256")
+        self.gif_colors_combo = ttk.Combobox(self.gif_frame, textvariable=self.gif_colors_var,
+                                            values=GIF_COLOR_OPTIONS, state="readonly")
+        self.gif_colors_combo.grid(row=0, column=5, sticky=(tk.W, tk.E), padx=(5, 0), pady=2)
+        
+        # Resolução máxima do GIF
+        ttk.Label(self.gif_frame, text="Resolução Máx:").grid(row=1, column=0, sticky=tk.W, pady=2)
+        self.gif_resolution_var = tk.StringVar(value="720p")
+        self.gif_resolution_combo = ttk.Combobox(self.gif_frame, textvariable=self.gif_resolution_var,
+                                                values=list(GIF_RESOLUTION_PRESETS.keys()), state="readonly")
+        self.gif_resolution_combo.grid(row=1, column=1, sticky=(tk.W, tk.E), padx=(5, 10), pady=2)
+        
+        # Opções avançadas de GIF
+        self.gif_dithering_var = tk.BooleanVar(value=True)
+        self.gif_dithering_check = ttk.Checkbutton(self.gif_frame, text="Dithering",
+                                                  variable=self.gif_dithering_var)
+        self.gif_dithering_check.grid(row=1, column=2, sticky=tk.W, pady=2)
+        
+        self.gif_optimize_var = tk.BooleanVar(value=True)
+        self.gif_optimize_check = ttk.Checkbutton(self.gif_frame, text="Otimizar",
+                                                 variable=self.gif_optimize_var)
+        self.gif_optimize_check.grid(row=1, column=3, sticky=tk.W, pady=2)
+    
+    def create_frame_extraction_section(self, parent):
+        """
+        Cria a seção de configurações para extração de frames
+        """
+        # Frame para extração de frames (inicialmente oculto)
+        self.frame_extraction_frame = ttk.LabelFrame(parent, text="Configurações de Extração de Frames", padding="5")
+        self.frame_extraction_frame.grid(row=5, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=5)
+        self.frame_extraction_frame.columnconfigure(1, weight=1)
+        self.frame_extraction_frame.columnconfigure(3, weight=1)
+        self.frame_extraction_frame.columnconfigure(5, weight=1)
+        self.frame_extraction_frame.grid_remove()  # Ocultar inicialmente
+        
+        # Formato da imagem
+        ttk.Label(self.frame_extraction_frame, text="Formato:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        self.frame_format_var = tk.StringVar(value="PNG")
+        self.frame_format_combo = ttk.Combobox(self.frame_extraction_frame, textvariable=self.frame_format_var,
+                                              values=list(FRAME_EXTRACTION_FORMATS.keys()), state="readonly")
+        self.frame_format_combo.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(5, 10), pady=2)
+        self.frame_format_combo.bind('<<ComboboxSelected>>', self.on_frame_format_changed)
+        
+        # Modo de extração
+        ttk.Label(self.frame_extraction_frame, text="Modo:").grid(row=0, column=2, sticky=tk.W, pady=2)
+        self.frame_mode_var = tk.StringVar(value="Todos os Frames")
+        self.frame_mode_combo = ttk.Combobox(self.frame_extraction_frame, textvariable=self.frame_mode_var,
+                                            values=list(FRAME_EXTRACTION_MODES.keys()), state="readonly")
+        self.frame_mode_combo.grid(row=0, column=3, sticky=(tk.W, tk.E), padx=(5, 10), pady=2)
+        self.frame_mode_combo.bind('<<ComboboxSelected>>', self.on_frame_mode_changed)
+        
+        # Qualidade (para formatos com compressão)
+        ttk.Label(self.frame_extraction_frame, text="Qualidade:").grid(row=0, column=4, sticky=tk.W, pady=2)
+        self.frame_quality_var = tk.IntVar(value=95)
+        self.frame_quality_spin = ttk.Spinbox(self.frame_extraction_frame, from_=1, to=100,
+                                             textvariable=self.frame_quality_var, width=8)
+        self.frame_quality_spin.grid(row=0, column=5, sticky=(tk.W, tk.E), padx=(5, 0), pady=2)
+        
+        # Configurações específicas do modo
+        self.frame_config_frame = ttk.Frame(self.frame_extraction_frame)
+        self.frame_config_frame.grid(row=1, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=5)
+        self.frame_config_frame.columnconfigure(1, weight=1)
+        self.frame_config_frame.columnconfigure(3, weight=1)
+        
+        # Intervalo (para modo intervalo)
+        self.interval_label = ttk.Label(self.frame_config_frame, text="Intervalo (seg):")
+        self.frame_interval_var = tk.DoubleVar(value=1.0)
+        self.frame_interval_spin = ttk.Spinbox(self.frame_config_frame, from_=0.1, to=60.0,
+                                              textvariable=self.frame_interval_var, width=8, increment=0.1)
+        
+        # Frames específicos (para modo específico)
+        self.specific_label = ttk.Label(self.frame_config_frame, text="Frames (ex: 1,5,10-20):")
+        self.frame_specific_var = tk.StringVar()
+        self.frame_specific_entry = ttk.Entry(self.frame_config_frame, textvariable=self.frame_specific_var)
+        
+        # Organização automática
+        self.frame_auto_folder_var = tk.BooleanVar(value=True)
+        self.frame_auto_folder_check = ttk.Checkbutton(self.frame_extraction_frame, 
+                                                      text="Criar pasta automática com nome do vídeo",
+                                                      variable=self.frame_auto_folder_var)
+        self.frame_auto_folder_check.grid(row=2, column=0, columnspan=6, sticky=tk.W, pady=5)
+        
+        # Configurar visibilidade inicial
+        self.update_frame_mode_visibility()
     
     def create_progress_section(self, parent, row):
         """
@@ -309,18 +429,54 @@ class MainWindow:
     
     def create_log_section(self, parent, row):
         """
-        Cria a seção de logs
+        Cria a seção de logs com splitter redimensionável e botão de salvar
         """
-        # Frame de logs
-        log_frame = ttk.LabelFrame(parent, text="Log de Conversão", padding="10")
-        log_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
-        log_frame.columnconfigure(0, weight=1)
-        log_frame.rowconfigure(0, weight=1)
+        # Frame principal para a seção de logs
+        log_main_frame = ttk.LabelFrame(parent, text="Log de Conversão", padding="5")
+        log_main_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
+        log_main_frame.columnconfigure(0, weight=1)
+        log_main_frame.rowconfigure(1, weight=1)
         parent.rowconfigure(row, weight=1)
         
-        # Área de texto para logs
-        self.log_text = scrolledtext.ScrolledText(log_frame, height=8, width=80)
+        # Frame superior com título e botão de salvar
+        header_frame = ttk.Frame(log_main_frame)
+        header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+        header_frame.columnconfigure(0, weight=1)
+        
+        # Botão de salvar log com ícone de disquete
+        self.save_log_btn = ttk.Button(
+            header_frame, 
+            text="💾 Salvar Log", 
+            command=self.save_log_manually,
+            width=12
+        )
+        self.save_log_btn.grid(row=0, column=1, sticky=tk.E)
+        
+        # PanedWindow para criar splitter redimensionável
+        self.log_paned = ttk.PanedWindow(log_main_frame, orient=tk.VERTICAL)
+        self.log_paned.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # Frame para a área de texto do log
+        log_text_frame = ttk.Frame(self.log_paned)
+        log_text_frame.columnconfigure(0, weight=1)
+        log_text_frame.rowconfigure(0, weight=1)
+        
+        # Área de texto para logs com scroll
+        self.log_text = scrolledtext.ScrolledText(
+            log_text_frame, 
+            height=8, 
+            width=80,
+            wrap=tk.WORD,
+            state=tk.NORMAL
+        )
         self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        
+        # Adicionar o frame ao PanedWindow
+        self.log_paned.add(log_text_frame, weight=1)
+        
+        # Inicializar sistema de logs
+        self.log_buffer = []  # Buffer para armazenar logs
+        self.create_logs_directory()
     
     def create_status_bar(self):
         """
@@ -328,6 +484,48 @@ class MainWindow:
         """
         self.status_bar = ttk.Label(self.root, text="Pronto para Conversão", relief=tk.SUNKEN, anchor=tk.W)
         self.status_bar.grid(row=1, column=0, sticky=(tk.W, tk.E))
+    
+    def create_logs_directory(self):
+        """
+        Cria o diretório de logs se não existir
+        """
+        logs_dir = Path("logs")
+        if not logs_dir.exists():
+            logs_dir.mkdir(exist_ok=True)
+    
+    def save_log_manually(self):
+        """
+        Salva o log atual manualmente quando o usuário clica no botão
+        """
+        try:
+            if hasattr(self, 'log_text') and self.log_text:
+                log_content = self.log_text.get("1.0", tk.END)
+                if log_content.strip():
+                    filename = self._generate_log_filename("manual")
+                    self._save_log_to_file(log_content, filename)
+                    messagebox.showinfo("Sucesso", f"Log salvo em: {filename}")
+                else:
+                    messagebox.showwarning("Aviso", "Não há conteúdo no log para salvar.")
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao salvar log: {str(e)}")
+    
+    def _generate_log_filename(self, log_type="auto"):
+        """
+        Gera nome do arquivo de log com timestamp
+        """
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        return f"logs/conversion_log_{log_type}_{timestamp}.log"
+    
+    def _save_log_to_file(self, content, filename):
+        """
+        Salva o conteúdo do log em arquivo
+        """
+        try:
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(content)
+        except Exception as e:
+            raise Exception(f"Erro ao escrever arquivo: {str(e)}")
     
     def update_status_bar(self, message):
         """
@@ -447,7 +645,7 @@ class MainWindow:
     
     def on_format_changed(self, event=None):
         """
-        Callback para mudança de formato - controla opções específicas do WebP
+        Callback para mudança de formato - controla opções específicas do WebP, GIF e Extração de Frames
         """
         format_selected = self.format_var.get()
         
@@ -458,12 +656,72 @@ class MainWindow:
             self.transparency_check.config(state="disabled")
             self.transparency_var.set(False)
         
-        # Mostrar dica específica para WebP
-        if 'WEBP' in format_selected:
-            self.log_message("WebP selecionado: Suporte a animação e transparência disponível")
+        # Mostrar/ocultar seções específicas baseado no formato
+        if 'GIF (Animado)' in format_selected:
+            self.gif_frame.grid()
+            self.frame_extraction_frame.grid_remove()
+            self.log_message("GIF Animado selecionado: Configurações avançadas disponíveis")
+        elif 'Extração de Frames' in format_selected:
+            self.frame_extraction_frame.grid()
+            self.gif_frame.grid_remove()
+            self.log_message("Extração de Frames selecionada: Múltiplos formatos disponíveis")
+        else:
+            self.gif_frame.grid_remove()
+            self.frame_extraction_frame.grid_remove()
+            
+            # Mostrar dica específica para WebP
+            if 'WEBP' in format_selected:
+                self.log_message("WebP selecionado: Suporte a animação e transparência disponível")
         
         # Validar compatibilidade de codec
         self._validate_codec_compatibility()
+    
+    def on_frame_format_changed(self, event=None):
+        """
+        Callback para mudança de formato de frame - ajusta configurações específicas
+        """
+        format_selected = self.frame_format_var.get()
+        
+        # Ajustar configurações baseado no formato
+        if format_selected == "PNG":
+            self.frame_quality_spin.config(state="disabled")
+            self.log_message("PNG selecionado: Formato sem perda, qualidade não aplicável")
+        elif format_selected == "WebP":
+            self.frame_quality_spin.config(state="normal")
+            self.log_message("WebP selecionado: Suporte a transparência e compressão avançada")
+        else:
+            self.frame_quality_spin.config(state="normal")
+            self.log_message(f"{format_selected} selecionado: Ajuste a qualidade conforme necessário")
+    
+    def on_frame_mode_changed(self, event=None):
+        """
+        Callback para mudança de modo de extração - mostra/oculta controles específicos
+        """
+        self.update_frame_mode_visibility()
+    
+    def update_frame_mode_visibility(self):
+        """
+        Atualiza a visibilidade dos controles baseado no modo de extração selecionado
+        """
+        mode_selected = self.frame_mode_var.get()
+        
+        # Ocultar todos os controles primeiro
+        self.interval_label.grid_remove()
+        self.frame_interval_spin.grid_remove()
+        self.specific_label.grid_remove()
+        self.frame_specific_entry.grid_remove()
+        
+        # Mostrar controles específicos baseado no modo
+        if mode_selected == "Intervalo Regular":
+            self.interval_label.grid(row=0, column=0, sticky=tk.W, pady=2)
+            self.frame_interval_spin.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(5, 10), pady=2)
+            self.log_message("Modo Intervalo: Extrair frames em intervalos regulares")
+        elif mode_selected == "Frames Específicos":
+            self.specific_label.grid(row=0, column=0, sticky=tk.W, pady=2)
+            self.frame_specific_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(5, 10), pady=2)
+            self.log_message("Modo Específico: Digite os números dos frames (ex: 1,5,10-20)")
+        else:  # Todos os Frames
+            self.log_message("Modo Completo: Extrair todos os frames do vídeo")
     
     def on_codec_changed(self, event=None):
         """
@@ -584,14 +842,41 @@ class MainWindow:
     
     def log_message(self, message):
         """
-        Adiciona mensagem ao log
+        Adiciona mensagem ao log e salva automaticamente
         """
         from datetime import datetime
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] {message}\n"
         
-        self.log_text.insert(tk.END, log_entry)
-        self.log_text.see(tk.END)
+        # Adicionar ao buffer de logs
+        if hasattr(self, 'log_buffer'):
+            self.log_buffer.append(log_entry)
+        
+        # Verificar se log_text existe antes de tentar usá-lo
+        if hasattr(self, 'log_text') and self.log_text:
+            self.log_text.insert(tk.END, log_entry)
+            self.log_text.see(tk.END)
+            
+            # Salvamento automático a cada 10 mensagens ou em eventos importantes
+            if hasattr(self, 'log_buffer') and len(self.log_buffer) % 10 == 0:
+                self._auto_save_log()
+        else:
+            # Se log_text não existe ainda, imprimir no console como fallback
+            print(log_entry.strip())
+    
+    def _auto_save_log(self):
+        """
+        Salva automaticamente o log atual
+        """
+        try:
+            if hasattr(self, 'log_text') and self.log_text:
+                log_content = self.log_text.get("1.0", tk.END)
+                if log_content.strip():
+                    filename = self._generate_log_filename("auto")
+                    self._save_log_to_file(log_content, filename)
+        except Exception as e:
+            # Falha silenciosa no salvamento automático para não interromper o fluxo
+            print(f"Erro no salvamento automático: {str(e)}")
     
     def get_conversion_settings(self):
         """
@@ -622,6 +907,32 @@ class MainWindow:
         if settings['resolution'] == 'Personalizada':
             settings['width'] = self.width_var.get()
             settings['height'] = self.height_var.get()
+        
+        # Configurações específicas para GIF
+        if 'GIF (Animado)' in settings['format']:
+            settings['gif_settings'] = {
+                'quality': self.gif_quality_var.get(),
+                'fps': self.gif_fps_var.get(),
+                'colors': self.gif_colors_var.get(),
+                'resolution': self.gif_resolution_var.get(),
+                'dithering': self.gif_dithering_var.get(),
+                'optimize': self.gif_optimize_var.get()
+            }
+        
+        # Configurações específicas para extração de frames
+        if 'Extração de Frames' in settings['format']:
+            settings['frame_extraction_settings'] = {
+                'format': self.frame_format_var.get(),
+                'mode': self.frame_mode_var.get(),
+                'quality': self.frame_quality_var.get(),
+                'auto_folder': self.frame_auto_folder_var.get()
+            }
+            
+            # Configurações específicas do modo
+            if settings['frame_extraction_settings']['mode'] == 'Intervalo Regular':
+                settings['frame_extraction_settings']['interval'] = self.frame_interval_var.get()
+            elif settings['frame_extraction_settings']['mode'] == 'Frames Específicos':
+                settings['frame_extraction_settings']['specific_frames'] = self.frame_specific_var.get()
         
         return settings
     
@@ -669,20 +980,48 @@ class MainWindow:
         if not self.selected_files:
             messagebox.showerror("Erro", "Adicione arquivos à lista para conversão.")
             return
-        
+
         if not self.output_dir_var.get():
             messagebox.showerror("Erro", "Selecione uma pasta de destino.")
             return
-        
+
         # Validar diretório
         is_valid, error_msg = validate_output_directory(self.output_dir_var.get())
         if not is_valid:
             messagebox.showerror("Erro", f"Diretório inválido: {error_msg}")
             return
-        
+
         # Configurações
         settings = self.get_conversion_settings()
-        
+
+        # LOG DETALHADO: Diagnóstico de travamento
+        self.log_message("🔍 DIAGNÓSTICO: Iniciando análise de possíveis causas de travamento")
+        self.log_message(f"🔍 Formato selecionado: {settings.get('format', 'N/A')}")
+        self.log_message(f"🔍 Número de arquivos: {len(self.selected_files)}")
+        self.log_message(f"🔍 Modo de performance: {settings.get('performance_config', {}).get('name', 'N/A')}")
+
+        # CORREÇÃO: Verificar se é operação problemática (GIF ou Extração de Frames)
+        format_selected = settings.get('format', '')
+        if 'GIF (Animado)' in format_selected or 'Extração de Frames' in format_selected:
+            self.log_message("🚨 OPERAÇÃO DE RISCO DETECTADA: GIF ou Extração de Frames")
+            self.log_message("🚨 Possíveis causas de travamento:")
+            self.log_message("   1. Processamento intensivo na thread principal")
+            self.log_message("   2. Alto consumo de memória")
+            self.log_message("   3. Falta de timeout para operações longas")
+            self.log_message("   4. Problemas de threading com Tkinter")
+
+            # CORREÇÃO: Avisar usuário sobre operação crítica
+            warning_msg = ("⚠️ ATENÇÃO: Operação crítica detectada!\n\n"
+                          "Esta operação pode demorar muito tempo e consumir muitos recursos.\n"
+                          "Recomendações:\n"
+                          "- Mantenha a aplicação em foco\n"
+                          "- Não minimize a janela durante o processamento\n"
+                          "- Certifique-se de ter espaço suficiente em disco\n\n"
+                          "Deseja continuar?")
+            if not messagebox.askyesno("Operação Crítica", warning_msg):
+                self.log_message("❌ Operação cancelada pelo usuário")
+                return
+
         # Configurar callbacks para o queue manager
         callbacks = {
             'job_started': self.on_job_started,

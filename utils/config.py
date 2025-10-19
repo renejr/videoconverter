@@ -19,7 +19,8 @@ SUPPORTED_INPUT_FORMATS = [
 ]
 
 SUPPORTED_OUTPUT_FORMATS = [
-    'MP4', 'AVI', 'MOV', 'MKV', 'WEBM', 'WEBP', 'FLV', 'WMV', 'M4V'
+    'MP4', 'AVI', 'MOV', 'MKV', 'WEBM', 'WEBP', 'FLV', 'WMV', 'M4V',
+    'GIF (Animado)', 'Extração de Frames'
 ]
 
 # Configurações de qualidade
@@ -566,3 +567,220 @@ def auto_configure_hardware() -> Dict:
         Dict com configurações otimizadas
     """
     return get_hardware_config().auto_configure()
+
+# ========================================
+# CONFIGURAÇÕES PARA GIF ANIMADO AVANÇADO
+# ========================================
+
+# Presets de qualidade para GIF
+GIF_QUALITY_PRESETS = {
+    'Baixa': {
+        'fps': 10,
+        'colors': 64,
+        'scale_width': 480,
+        'dithering': True,
+        'optimize': 'size',
+        'description': 'Menor tamanho, qualidade básica'
+    },
+    'Média': {
+        'fps': 15,
+        'colors': 128,
+        'scale_width': 640,
+        'dithering': True,
+        'optimize': 'balanced',
+        'description': 'Equilíbrio entre tamanho e qualidade'
+    },
+    'Alta': {
+        'fps': 24,
+        'colors': 256,
+        'scale_width': 720,
+        'dithering': True,
+        'optimize': 'quality',
+        'description': 'Alta qualidade, tamanho moderado'
+    },
+    'Muito Alta': {
+        'fps': 30,
+        'colors': 256,
+        'scale_width': 1080,
+        'dithering': False,
+        'optimize': 'quality',
+        'description': 'Máxima qualidade, maior tamanho'
+    },
+    'Personalizada': {
+        'fps': 15,
+        'colors': 256,
+        'scale_width': 640,
+        'dithering': True,
+        'optimize': 'balanced',
+        'description': 'Configurações personalizáveis'
+    }
+}
+
+# Opções de FPS para GIF
+GIF_FPS_OPTIONS = ['5', '10', '12', '15', '20', '24', '25', '30', 'Personalizado']
+
+# Opções de cores para GIF
+GIF_COLOR_OPTIONS = ['16', '32', '64', '128', '256', 'Personalizado']
+
+# Opções de resolução para GIF
+GIF_RESOLUTION_PRESETS = {
+    'Original': None,
+    '320p': (320, 240),
+    '480p': (640, 480),
+    '640p': (640, 480),
+    '720p': (1280, 720),
+    '1080p': (1920, 1080),
+    'Personalizada': None
+}
+
+# Configurações de otimização para GIF
+GIF_OPTIMIZATION_MODES = {
+    'size': {
+        'flags': 'lanczos',
+        'stats_mode': 'diff',
+        'dither': 'bayer:bayer_scale=2'
+    },
+    'balanced': {
+        'flags': 'lanczos',
+        'stats_mode': 'full',
+        'dither': 'floyd_steinberg'
+    },
+    'quality': {
+        'flags': 'lanczos',
+        'stats_mode': 'full',
+        'dither': 'none'
+    }
+}
+
+# ========================================
+# CONFIGURAÇÕES PARA EXTRAÇÃO DE FRAMES
+# ========================================
+
+# Formatos suportados para extração de frames
+FRAME_EXTRACTION_FORMATS = {
+    'JPG': {
+        'extension': '.jpg',
+        'quality_param': '-q:v',
+        'quality_range': (1, 31),  # 1=melhor, 31=pior
+        'default_quality': 2,
+        'supports_transparency': False,
+        'description': 'JPEG - Alta compatibilidade, menor tamanho'
+    },
+    'PNG': {
+        'extension': '.png',
+        'quality_param': '-compression_level',
+        'quality_range': (0, 9),  # 0=sem compressão, 9=máxima compressão
+        'default_quality': 6,
+        'supports_transparency': True,
+        'description': 'PNG - Sem perda, suporte à transparência'
+    },
+    'WebP': {
+        'extension': '.webp',
+        'quality_param': '-quality',
+        'quality_range': (0, 100),  # 0=pior, 100=melhor
+        'default_quality': 90,
+        'supports_transparency': True,
+        'lossless_option': True,
+        'description': 'WebP - Moderno, eficiente, com transparência'
+    },
+    'TIFF': {
+        'extension': '.tiff',
+        'quality_param': '-compression',
+        'compression_options': ['none', 'lzw', 'zip'],
+        'default_compression': 'lzw',
+        'supports_transparency': True,
+        'description': 'TIFF - Qualidade profissional, sem perda'
+    }
+}
+
+# Modos de extração de frames
+FRAME_EXTRACTION_MODES = {
+    'all_frames': {
+        'name': 'Todos os Frames',
+        'description': 'Extrai todos os frames do vídeo',
+        'ffmpeg_filter': 'fps=fps=source_fps'
+    },
+    'interval_seconds': {
+        'name': 'Intervalo (Segundos)',
+        'description': 'Extrai 1 frame a cada X segundos',
+        'ffmpeg_filter': 'fps=1/{interval}'
+    },
+    'interval_frames': {
+        'name': 'Intervalo (Frames)',
+        'description': 'Extrai 1 frame a cada X frames',
+        'ffmpeg_filter': 'select=not(mod(n\\,{interval}))'
+    },
+    'specific_times': {
+        'name': 'Tempos Específicos',
+        'description': 'Extrai frames em timestamps específicos',
+        'ffmpeg_filter': 'select=eq(t\\,{timestamp})'
+    },
+    'key_points': {
+        'name': 'Pontos-Chave',
+        'description': 'Extrai frames no início, meio e fim',
+        'ffmpeg_filter': 'select=eq(n\\,0)+eq(n\\,{middle})+eq(n\\,{end})'
+    }
+}
+
+# Configurações de qualidade para WebP com transparência
+WEBP_FRAME_PRESETS = {
+    'Rápida': {
+        'quality': 75,
+        'method': 4,
+        'lossless': False,
+        'alpha_quality': 90,
+        'description': 'Conversão rápida, boa qualidade'
+    },
+    'Balanceada': {
+        'quality': 85,
+        'method': 4,
+        'lossless': False,
+        'alpha_quality': 95,
+        'description': 'Equilíbrio entre velocidade e qualidade'
+    },
+    'Qualidade': {
+        'quality': 95,
+        'method': 6,
+        'lossless': False,
+        'alpha_quality': 100,
+        'description': 'Alta qualidade com transparência preservada'
+    },
+    'Lossless': {
+        'quality': 100,
+        'method': 6,
+        'lossless': True,
+        'alpha_quality': 100,
+        'description': 'Sem perda, máxima qualidade'
+    }
+}
+
+# Configurações de resolução para frames
+FRAME_RESOLUTION_PRESETS = {
+    'Original': None,
+    '480p': (854, 480),
+    '720p': (1280, 720),
+    '1080p': (1920, 1080),
+    '1440p': (2560, 1440),
+    '2160p': (3840, 2160),
+    'Personalizada': None
+}
+
+# Configurações de nomenclatura para frames extraídos
+FRAME_NAMING_PATTERNS = {
+    'sequential': 'frame_{:04d}',
+    'timestamp': 'frame_{timestamp}',
+    'timecode': 'frame_{hours:02d}h{minutes:02d}m{seconds:02d}s',
+    'custom': '{custom_prefix}_{:04d}'
+}
+
+# Configurações padrão para extração de frames
+DEFAULT_FRAME_EXTRACTION_SETTINGS = {
+    'format': 'PNG',
+    'quality': 'Balanceada',
+    'resolution': 'Original',
+    'mode': 'interval_seconds',
+    'interval': 1,
+    'create_subfolder': True,
+    'naming_pattern': 'sequential',
+    'preserve_aspect_ratio': True
+}
