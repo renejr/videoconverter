@@ -39,6 +39,13 @@ Um conversor de vídeo moderno e eficiente com interface gráfica intuitiva, sup
 - **Fallback Inteligente**: Usa CPU automaticamente quando GPU não disponível
 - **Otimização Adaptativa**: Ajusta configurações baseado no hardware detectado
 
+### 🔄 **Sistema de Atualizações Automáticas**
+- **Verificação Automática**: Detecta novas versões automaticamente no GitHub
+- **Download Inteligente**: Download e instalação automática de atualizações
+- **Reinicialização Inteligente**: Restart automático após atualizações
+- **Verificação de Integridade**: Validação de segurança antes da instalação
+- **Interface Integrada**: Widget de atualização na interface principal
+
 ### 🛠️ **Funcionalidades Técnicas**
 - **Múltiplos Formatos**: Suporte extensivo para formatos de entrada e saída
 - **Instalação Automática**: FFmpeg instalado automaticamente se necessário
@@ -218,6 +225,7 @@ Escolha entre os formatos disponíveis:
 - FLV (web)
 - WEBM (web)
 - M4V (iTunes)
+- **🎵 Extração de Áudio** (novo!) - Extrai apenas o áudio do vídeo
 
 #### Qualidade
 - **Alta**: Melhor qualidade, arquivo maior
@@ -238,6 +246,29 @@ Escolha entre os formatos disponíveis:
 #### Transparência
 - Marque esta opção para preservar canais alfa (apenas para formatos compatíveis)
 
+#### 🎵 Extração de Áudio (Novo!)
+Quando você seleciona "Extração de Áudio" como formato de saída, opções adicionais aparecem:
+
+**Formatos de Áudio Suportados:**
+- **MP3** - Formato universal, boa compressão (recomendado)
+- **AAC** - Alta qualidade, usado em dispositivos Apple
+- **WAV** - Sem compressão, máxima qualidade
+- **FLAC** - Compressão sem perda, arquivos menores que WAV
+- **OGG** - Código aberto, boa compressão
+- **M4A** - Formato Apple, compatível com iTunes
+- **WMA** - Formato Windows Media
+- **OPUS** - Codec moderno, excelente para streaming
+
+**Configurações de Qualidade por Formato:**
+- **Baixa**: Menor tamanho de arquivo, qualidade reduzida
+- **Média**: Equilíbrio entre qualidade e tamanho (recomendado)
+- **Alta**: Melhor qualidade, arquivo maior
+- **Muito Alta**: Máxima qualidade disponível
+
+**Opções Avançadas:**
+- **Preservar Metadados**: Mantém informações como título, artista, álbum
+- **Preservar Capa do Álbum**: Inclui artwork quando disponível (MP3, FLAC, OGG, M4A)
+
 ### 3. Diretório de Saída
 - Clique em "Procurar" para escolher onde salvar o arquivo convertido
 - O nome do arquivo será gerado automaticamente baseado no arquivo original
@@ -247,6 +278,154 @@ Escolha entre os formatos disponíveis:
 - Acompanhe o progresso na barra de progresso
 - Veja detalhes no log na parte inferior da janela
 - Use "Cancelar" para interromper a conversão se necessário
+
+## 🔄 Sistema de Atualizações Automáticas
+
+O VideoConverter inclui um **sistema avançado de atualizações automáticas** que mantém sua aplicação sempre atualizada com as últimas funcionalidades e correções de segurança.
+
+### ✨ Características do Sistema de Atualizações
+
+- **🔍 Verificação Automática**: Verifica atualizações automaticamente no GitHub
+- **📥 Download Inteligente**: Download automático de novas versões
+- **🔧 Instalação Automática**: Substitui arquivos automaticamente
+- **🔄 Reinicialização Inteligente**: Reinicia a aplicação após atualizações
+- **🛡️ Verificação de Integridade**: Valida downloads antes da instalação
+- **📊 Interface Integrada**: Widget de atualização na interface principal
+- **⚡ Processo Não-Bloqueante**: Atualizações em background
+
+### 🚀 Como Funciona
+
+#### Verificação Automática
+```python
+# O sistema verifica automaticamente por atualizações
+# Compara versão local com a versão mais recente no GitHub
+# Notifica o usuário quando uma nova versão está disponível
+```
+
+#### Processo de Atualização
+1. **Detecção**: Sistema detecta nova versão disponível
+2. **Notificação**: Usuário é notificado via interface gráfica
+3. **Download**: Download automático da nova versão
+4. **Verificação**: Validação de integridade do arquivo baixado
+5. **Instalação**: Substituição automática dos arquivos
+6. **Reinicialização**: Restart automático da aplicação
+
+### 🎯 Componentes do Sistema
+
+#### UpdateChecker
+- **Função**: Verifica disponibilidade de atualizações
+- **Fonte**: GitHub Releases API
+- **Frequência**: Configurável (padrão: verificação na inicialização)
+
+#### UpdateDownloader  
+- **Função**: Gerencia download de atualizações
+- **Características**: Progress tracking, verificação de integridade
+- **Formato**: Suporte para arquivos ZIP e executáveis
+
+#### Sistema de Restart
+- **Função**: Reinicialização inteligente pós-atualização
+- **Características**: 
+  - Suporte para executáveis compilados e scripts Python
+  - Delay configurável para finalização de processos
+  - Fallback para restart simples em caso de falha
+  - Script temporário para restart robusto
+
+### ⚙️ Configuração
+
+#### Configurações Disponíveis
+```python
+# Configurações do sistema de atualizações
+UPDATE_CONFIG = {
+    "auto_check": True,           # Verificação automática
+    "check_frequency": "startup", # Frequência de verificação
+    "auto_download": True,        # Download automático
+    "auto_install": False,        # Instalação automática (requer confirmação)
+    "backup_before_update": True, # Backup antes de atualizar
+    "restart_delay": 3            # Delay para restart (segundos)
+}
+```
+
+#### Personalização
+- **Verificação Manual**: Botão "Verificar Atualizações" na interface
+- **Controle de Frequência**: Configure quando verificar atualizações
+- **Modo Silencioso**: Atualizações em background sem interrupções
+- **Backup Automático**: Backup da versão atual antes de atualizar
+
+### 🛡️ Segurança e Confiabilidade
+
+#### Verificações de Segurança
+- **✅ Verificação de Origem**: Apenas downloads do repositório oficial
+- **✅ Validação de Integridade**: Checksum dos arquivos baixados
+- **✅ Backup Automático**: Backup da versão atual antes de atualizar
+- **✅ Rollback**: Possibilidade de reverter em caso de problemas
+
+#### Tratamento de Erros
+- **🔄 Retry Automático**: Tentativas automáticas em caso de falha
+- **📝 Log Detalhado**: Registro completo do processo de atualização
+- **🚨 Notificações**: Alertas claros sobre problemas
+- **🛠️ Recuperação**: Mecanismos de recuperação automática
+
+### 📊 Monitoramento e Logs
+
+#### Sistema de Logs
+```
+[2024-01-15 10:30:15] INFO: Verificando atualizações...
+[2024-01-15 10:30:16] INFO: Nova versão encontrada: v3.1.0
+[2024-01-15 10:30:17] INFO: Iniciando download...
+[2024-01-15 10:30:25] INFO: Download concluído com sucesso
+[2024-01-15 10:30:26] INFO: Verificação de integridade: OK
+[2024-01-15 10:30:27] INFO: Instalação iniciada...
+[2024-01-15 10:30:30] INFO: Atualização concluída com sucesso
+```
+
+#### Métricas Disponíveis
+- **📈 Tempo de Download**: Velocidade e duração do download
+- **📊 Taxa de Sucesso**: Estatísticas de atualizações bem-sucedidas
+- **🔍 Histórico**: Registro de todas as atualizações realizadas
+- **⚡ Performance**: Impacto no desempenho da aplicação
+
+### 🧪 Testes do Sistema
+
+O sistema de atualizações inclui uma **suite completa de testes**:
+
+#### Testes de Componentes
+```bash
+# Testa componentes individuais
+python test_update_components.py
+```
+
+#### Testes do Sistema de Restart
+```bash
+# Testa funcionalidade de reinicialização
+python test_restart_system.py
+```
+
+#### Testes Integrados
+```bash
+# Testa todo o fluxo de atualização
+python test_simple_update.py
+```
+
+#### Cobertura de Testes
+- **✅ Verificação de Atualizações**: 100% testado
+- **✅ Download e Instalação**: 100% testado  
+- **✅ Sistema de Restart**: 100% testado
+- **✅ Tratamento de Erros**: 100% testado
+- **✅ Integração Completa**: 100% testado
+
+### 💡 Dicas de Uso
+
+#### Para Usuários
+- **🔄 Mantenha Ativo**: Deixe a verificação automática ativada
+- **📱 Fique Atento**: Observe notificações de atualização
+- **💾 Backup Manual**: Faça backup de configurações importantes
+- **🔌 Conexão Estável**: Mantenha conexão estável durante atualizações
+
+#### Para Desenvolvedores
+- **📝 Versionamento**: Use semantic versioning para releases
+- **📋 Changelog**: Mantenha changelog atualizado
+- **🧪 Testes**: Execute testes antes de releases
+- **📦 Empacotamento**: Use formatos compatíveis (ZIP, EXE)
 
 ## 🔧 Estrutura do Projeto
 
@@ -308,6 +487,7 @@ python test_complete.py
 
 **Saída:**
 - Vídeo: MP4, AVI, MOV, MKV, WMV, FLV, WEBM, M4V
+- **Áudio**: MP3, AAC, WAV, FLAC, OGG, M4A, WMA, OPUS
 
 ### Presets de Qualidade
 
@@ -422,7 +602,16 @@ Se o instalador automático falhar ou você usar instalação manual:
 
 ## 📝 Log de Alterações
 
-### v2.1.2 (Atual)
+### v2.2.0 (Atual)
+- **🎵 Extração de Áudio**: Nova funcionalidade completa para extrair áudio de vídeos
+- **🎼 8 Formatos de Áudio**: Suporte para MP3, AAC, WAV, FLAC, OGG, M4A, WMA, OPUS
+- **⚙️ Configurações Avançadas**: 4 níveis de qualidade por formato de áudio
+- **📋 Preservação de Metadados**: Opção para manter informações como título, artista, álbum
+- **🖼️ Capa de Álbum**: Preservação de artwork quando suportado pelo formato
+- **🧪 Testes Unitários**: 15 testes automatizados para validar funcionalidade de áudio
+- **🎯 Interface Intuitiva**: Controles dinâmicos que aparecem conforme formato selecionado
+
+### v2.1.2
 - **🎬 Correção Crítica GIF**: Resolvido problema de erro no FFmpeg com arquivos GIF contendo "(Animado)" no nome
 - **🔧 Limpeza de Nomes**: Implementada limpeza automática de caracteres problemáticos em nomes de arquivos GIF
 - **📁 Normalização de Extensões**: Conversão automática de ".GIF" maiúsculo para ".gif" minúsculo

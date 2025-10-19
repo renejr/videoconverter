@@ -29,6 +29,10 @@ from utils.config import (
     FRAME_EXTRACTION_FORMATS,
     FRAME_EXTRACTION_MODES,
     WEBP_FRAME_PRESETS,
+    SUPPORTED_AUDIO_FORMATS,
+    AUDIO_QUALITY_PRESETS,
+    AUDIO_CODEC_CONFIG,
+    AUDIO_EXTRACTION_DEFAULTS,
 )
 from utils.validators import (
     validate_input_file,
@@ -233,6 +237,46 @@ class VideoConverter(threading.Thread):
 
         return video_info
 
+    def has_audio_stream(self, file_path):
+        """
+        Verifica se o arquivo de vídeo contém streams de áudio
+
+        Args:
+            file_path: Caminho para o arquivo de vídeo
+
+        Returns:
+            bool: True se contém áudio, False caso contrário
+        """
+        try:
+            ffprobe_cmd = self.ffmpeg_installer.get_ffprobe_command()
+            if not ffprobe_cmd:
+                self._call_callback("log", "FFprobe não encontrado para verificar streams de áudio")
+                return False
+
+            # Comando para verificar streams de áudio
+            cmd = [
+                ffprobe_cmd,
+                "-v", "quiet",
+                "-select_streams", "a:0",
+                "-show_entries", "stream=codec_type",
+                "-of", "csv=p=0",
+                file_path
+            ]
+
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=30
+            )
+
+            # Se encontrou stream de áudio, retorna True
+            return result.returncode == 0 and "audio" in result.stdout.lower()
+
+        except subprocess.TimeoutExpired:
+            self._call_callback("log", "Timeout ao verificar streams de áudio")
+            return False
+        except Exception as e:
+            self._call_callback("log", f"Erro ao verificar streams de áudio: {str(e)}")
+            return False
+
     def build_ffmpeg_command(self):
         """
         Constrói o comando FFmpeg baseado nas configurações
@@ -253,6 +297,8 @@ class VideoConverter(threading.Thread):
             return self.build_gif_command(cmd)
         elif "Extração de Frames" in format_name:
             return self.build_frame_extraction_command(cmd)
+        elif "Extração de Áudio" in format_name:
+            return self.build_audio_extraction_command(cmd)
 
         # Configurações de decodificação CUDA (se disponível)
         self.add_cuda_decoder_settings(cmd)
@@ -513,6 +559,76 @@ class VideoConverter(threading.Thread):
         # Padrão de saída
         cmd.append(output_pattern)
 
+        return cmd
+
+    def build_audio_extraction_command(self, cmd):
+        """
+        Constrói comando FFmpeg para extração de áudio
+
+        Args:
+            cmd: Lista base do comando FFmpeg
+
+        Returns:
+            list: Comando FFmpeg completo para extração de áudio
+        """
+        # Obter configurações de extração de áudio
+        audio_settings = self.conversion_settings.get("audio_extraction", {})
+        
+        # Formato de áudio (padrão: MP3)
+        audio_format = audio_settings.get("format", AUDIO_EXTRACTION_DEFAULTS["format"])
+        
+        # Qualidade (padrão: standard)
+        quality = audio_settings.get("quality", AUDIO_EXTRACTION_DEFAULTS["quality"])
+        
+        # Verificar se o formato é suportado
+        if audio_format not in SUPPORTED_AUDIO_FORMATS:
+            audio_format = AUDIO_EXTRACTION_DEFAULTS["format"]
+            self._call_callback("log", f"Formato {audio_format} não suportado, usando MP3")
+
+        # Obter configurações do codec
+        codec_config = AUDIO_CODEC_CONFIG.get(audio_format, AUDIO_CODEC_CONFIG["MP3"])
+        quality_presets = AUDIO_QUALITY_PRESETS.get(audio_format, AUDIO_QUALITY_PRESETS["MP3"])
+        
+        # Arquivo de entrada
+        cmd.extend(["-i", self.input_file])
+        
+        # Desabilitar vídeo (apenas áudio)
+        cmd.extend(["-vn"])
+        
+        # Configurar codec de áudio
+        cmd.extend(["-c:a", codec_config["codec"]])
+        
+        # Configurar qualidade/bitrate
+        if quality in quality_presets:
+            preset = quality_presets[quality]
+            if "bitrate" in preset:
+                cmd.extend(["-b:a", preset["bitrate"]])
+            if "vbr_quality" in preset and codec_config["codec"] in ["libmp3lame", "libvorbis"]:
+                cmd.extend(["-q:a", str(preset["vbr_quality"])])
+        
+        # Configurações adicionais baseadas no formato
+        if audio_format == "WAV":
+            # WAV não comprimido
+            cmd.extend(["-c:a", "pcm_s16le"])
+        elif audio_format == "FLAC":
+            # FLAC sem perdas
+            cmd.extend(["-compression_level", "8"])
+        elif audio_format == "OGG":
+            # Vorbis para OGG
+            cmd.extend(["-c:a", "libvorbis"])
+        
+        # Preservar metadados se configurado
+        if audio_settings.get("preserve_metadata", AUDIO_EXTRACTION_DEFAULTS["preserve_metadata"]):
+            cmd.extend(["-map_metadata", "0"])
+        
+        # Configurações gerais
+        cmd.extend(["-y"])  # Sobrescrever arquivo de saída
+        
+        # Arquivo de saída
+        cmd.append(self.output_file)
+        
+        self._call_callback("log", f"Extraindo áudio para {audio_format} - Qualidade: {quality}")
+        
         return cmd
 
     def add_cuda_decoder_settings(self, cmd):
@@ -1326,6 +1442,7 @@ class VideoConverterManager:
             {
                 "GIF (Animado)": ".gif",
                 "Extração de Frames": ".jpg",  # Extensão padrão, será sobrescrita dinamicamente
+                "Extração de Áudio": ".mp3",  # Extensão padrão, será sobrescrita dinamicamente
             }
         )
 
@@ -1400,13 +1517,14 @@ class VideoConverterManager:
         is_valid, _ = validate_input_file(file_path)
         return is_valid
 
-    def get_output_extension(self, format_name, frame_format=None):
+    def get_output_extension(self, format_name, frame_format=None, audio_format=None):
         """
         Retorna a extensão para o formato de saída
 
         Args:
             format_name: Nome do formato (ex: "MP4 (H.264)")
             frame_format: Formato específico para extração de frames (JPG, PNG, WebP, TIFF)
+            audio_format: Formato específico para extração de áudio (MP3, AAC, WAV, etc.)
 
         Returns:
             str: Extensão do arquivo
@@ -1420,6 +1538,12 @@ class VideoConverterManager:
                 "TIFF": ".tiff",
             }
             return frame_extensions.get(frame_format, ".jpg")
+        
+        # Para extração de áudio, usar o formato específico selecionado
+        if "Extração de Áudio" in format_name and audio_format:
+            if audio_format in AUDIO_CODEC_CONFIG:
+                return AUDIO_CODEC_CONFIG[audio_format]["extension"]
+            return ".mp3"  # Padrão
 
         return self.supported_formats["output"].get(format_name, ".mp4")
 
@@ -1483,6 +1607,15 @@ class VideoConverterManager:
             if frame_extension.startswith("."):
                 frame_extension = frame_extension[1:]
             extension = frame_extension
+        elif "Extração de Áudio" in format_name:
+            # Para extração de áudio, usar o formato específico selecionado
+            audio_format = settings.get("audio_extraction_settings", {}).get("format", "MP3")
+            audio_extension = self.get_output_extension(
+                format_name, audio_format=audio_format
+            )
+            if audio_extension.startswith("."):
+                audio_extension = audio_extension[1:]
+            extension = audio_extension
 
         # CORREÇÃO CRÍTICA: Problema de nomenclatura GIF identificado
         # O FFmpeg não consegue processar nomes de arquivo com espaços e caracteres especiais
