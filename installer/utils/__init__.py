@@ -13,8 +13,4 @@ from .logger import Logger
 from .progress import ProgressBar
 from .downloader import Downloader
 
-__all__ = [
-    "Logger",
-    "ProgressBar", 
-    "Downloader"
-]
+__all__ = ["Logger", "ProgressBar", "Downloader"]

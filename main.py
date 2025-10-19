@@ -25,14 +25,14 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Conversor de Vídeos")
     app.setApplicationVersion("1.0.0")
-    
+
     # Configurar estilo da aplicação
-    app.setStyle('Fusion')
-    
+    app.setStyle("Fusion")
+
     # Criar e mostrar janela principal
     window = VideoConverterWindow()
     window.show()
-    
+
     # Executar loop principal
     sys.exit(app.exec())
 

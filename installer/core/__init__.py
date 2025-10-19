@@ -13,7 +13,4 @@ Componentes principais do instalador:
 from .os_detector import OSDetector
 from .python_manager import PythonManager
 
-__all__ = [
-    "OSDetector", 
-    "PythonManager"
-]
+__all__ = ["OSDetector", "PythonManager"]
