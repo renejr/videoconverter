@@ -44,6 +44,7 @@ SUPPORTED_OUTPUT_FORMATS = [
     "M4V",
     "GIF (Animado)",
     "Extração de Frames",
+    "Extração de Áudio",
 ]
 
 # Configurações de qualidade
@@ -101,6 +102,146 @@ AVI_AUDIO_CONFIG = {
     "sample_rate": "44100",
     "channels": 2,
     "quality": 2,  # Qualidade VBR para MP3 (0=melhor, 9=pior)
+}
+
+# ========================================
+# CONFIGURAÇÕES DE EXTRAÇÃO DE ÁUDIO
+# ========================================
+
+# Formatos de áudio suportados para extração
+SUPPORTED_AUDIO_FORMATS = [
+    "MP3",
+    "AAC",
+    "WAV", 
+    "FLAC",
+    "OGG",
+    "M4A",
+    "WMA",
+    "OPUS"
+]
+
+# Configurações de qualidade para cada formato de áudio
+AUDIO_QUALITY_PRESETS = {
+    "MP3": {
+        "Baixa": {"bitrate": "128k", "quality": 4},
+        "Média": {"bitrate": "192k", "quality": 2},
+        "Alta": {"bitrate": "256k", "quality": 0},
+        "Muito Alta": {"bitrate": "320k", "quality": 0},
+    },
+    "AAC": {
+        "Baixa": {"bitrate": "128k", "profile": "aac_low"},
+        "Média": {"bitrate": "192k", "profile": "aac_low"},
+        "Alta": {"bitrate": "256k", "profile": "aac_low"},
+        "Muito Alta": {"bitrate": "320k", "profile": "aac_low"},
+    },
+    "WAV": {
+        "Baixa": {"sample_rate": "22050", "bit_depth": "16"},
+        "Média": {"sample_rate": "44100", "bit_depth": "16"},
+        "Alta": {"sample_rate": "48000", "bit_depth": "24"},
+        "Muito Alta": {"sample_rate": "96000", "bit_depth": "24"},
+    },
+    "FLAC": {
+        "Baixa": {"compression_level": 0, "sample_rate": "44100"},
+        "Média": {"compression_level": 5, "sample_rate": "44100"},
+        "Alta": {"compression_level": 8, "sample_rate": "48000"},
+        "Muito Alta": {"compression_level": 12, "sample_rate": "96000"},
+    },
+    "OGG": {
+        "Baixa": {"quality": 3, "bitrate": "128k"},
+        "Média": {"quality": 6, "bitrate": "192k"},
+        "Alta": {"quality": 8, "bitrate": "256k"},
+        "Muito Alta": {"quality": 10, "bitrate": "320k"},
+    },
+    "M4A": {
+        "Baixa": {"bitrate": "128k", "profile": "aac_low"},
+        "Média": {"bitrate": "192k", "profile": "aac_low"},
+        "Alta": {"bitrate": "256k", "profile": "aac_low"},
+        "Muito Alta": {"bitrate": "320k", "profile": "aac_low"},
+    },
+    "WMA": {
+        "Baixa": {"bitrate": "128k"},
+        "Média": {"bitrate": "192k"},
+        "Alta": {"bitrate": "256k"},
+        "Muito Alta": {"bitrate": "320k"},
+    },
+    "OPUS": {
+        "Baixa": {"bitrate": "96k", "application": "audio"},
+        "Média": {"bitrate": "128k", "application": "audio"},
+        "Alta": {"bitrate": "192k", "application": "audio"},
+        "Muito Alta": {"bitrate": "256k", "application": "audio"},
+    },
+}
+
+# Configurações de codec para cada formato de áudio
+AUDIO_CODEC_CONFIG = {
+    "MP3": {
+        "codec": "libmp3lame",
+        "extension": ".mp3",
+        "container": "mp3",
+        "supports_metadata": True,
+        "supports_album_art": True,
+    },
+    "AAC": {
+        "codec": "aac",
+        "extension": ".aac",
+        "container": "adts",
+        "supports_metadata": True,
+        "supports_album_art": False,
+    },
+    "WAV": {
+        "codec": "pcm_s16le",
+        "extension": ".wav",
+        "container": "wav",
+        "supports_metadata": False,
+        "supports_album_art": False,
+    },
+    "FLAC": {
+        "codec": "flac",
+        "extension": ".flac",
+        "container": "flac",
+        "supports_metadata": True,
+        "supports_album_art": True,
+    },
+    "OGG": {
+        "codec": "libvorbis",
+        "extension": ".ogg",
+        "container": "ogg",
+        "supports_metadata": True,
+        "supports_album_art": True,
+    },
+    "M4A": {
+        "codec": "aac",
+        "extension": ".m4a",
+        "container": "ipod",
+        "supports_metadata": True,
+        "supports_album_art": True,
+    },
+    "WMA": {
+        "codec": "wmav2",
+        "extension": ".wma",
+        "container": "asf",
+        "supports_metadata": True,
+        "supports_album_art": False,
+    },
+    "OPUS": {
+        "codec": "libopus",
+        "extension": ".opus",
+        "container": "ogg",
+        "supports_metadata": True,
+        "supports_album_art": False,
+    },
+}
+
+# Configurações padrão para extração de áudio
+AUDIO_EXTRACTION_DEFAULTS = {
+    "format": "MP3",
+    "quality": "Média",
+    "preserve_metadata": True,
+    "preserve_album_art": True,
+    "normalize_audio": False,
+    "remove_silence": False,
+    "fade_in": 0.0,  # segundos
+    "fade_out": 0.0,  # segundos
 }
 
 # Configurações de FPS

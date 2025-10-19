@@ -22,6 +22,9 @@ from utils.config import (
     FRAME_EXTRACTION_FORMATS,
     FRAME_EXTRACTION_MODES,
     WEBP_FRAME_PRESETS,
+    SUPPORTED_AUDIO_FORMATS,
+    AUDIO_QUALITY_PRESETS,
+    AUDIO_EXTRACTION_DEFAULTS,
 )
 from utils.validators import validate_input_file, validate_output_directory
 from utils.performance_modes import (
@@ -30,6 +33,8 @@ from utils.performance_modes import (
     get_performance_mode_labels,
     get_performance_mode_tooltips,
 )
+from utils.updater import UpdateChecker
+from gui.update_widget import UpdateWidget
 
 
 class MainWindow:
@@ -52,6 +57,10 @@ class MainWindow:
         self.queue_manager = ConversionQueueManager()
         self.conversion_thread = None
         self.ffmpeg_installer = FFmpegInstaller()
+        
+        # Inicializar sistema de atualização
+        self.update_widget = UpdateWidget(self.root, "usuario/vidconv")
+        self.update_checker = UpdateChecker("usuario/vidconv")
 
         # Configurar estilo
         self.setup_style()
@@ -64,6 +73,9 @@ class MainWindow:
 
         # Verificar FFmpeg na inicialização
         self.check_ffmpeg_installation()
+        
+        # Configurar sistema de atualização
+        self.setup_update_system()
 
     def setup_style(self):
         """
@@ -333,9 +345,10 @@ class MainWindow:
         )
         self.transparency_check.grid(row=3, column=0, columnspan=2, sticky=tk.W, pady=5)
 
-        # Seções específicas para GIF e Extração de Frames
+        # Seções específicas para GIF, Extração de Frames e Extração de Áudio
         self.create_gif_settings_section(settings_frame)
         self.create_frame_extraction_section(settings_frame)
+        self.create_audio_extraction_section(settings_frame)
 
         # Prioridade de Performance
         priority_frame = ttk.LabelFrame(
@@ -583,6 +596,72 @@ class MainWindow:
         # Configurar visibilidade inicial
         self.update_frame_mode_visibility()
 
+    def create_audio_extraction_section(self, parent):
+        """
+        Cria a seção de configurações de extração de áudio
+        """
+        # Frame principal para extração de áudio
+        self.audio_extraction_frame = ttk.LabelFrame(
+            parent, text="Configurações de Extração de Áudio", padding="10"
+        )
+        self.audio_extraction_frame.grid(
+            row=3, column=0, columnspan=6, sticky=tk.EW, pady=5
+        )
+
+        # Checkbox para habilitar extração de áudio
+        self.audio_extraction_var = tk.BooleanVar(value=False)
+        self.audio_extraction_check = ttk.Checkbutton(
+            self.audio_extraction_frame,
+            text="Extrair apenas áudio do vídeo",
+            variable=self.audio_extraction_var,
+            command=self.on_audio_extraction_changed,
+        )
+        self.audio_extraction_check.grid(
+            row=0, column=0, columnspan=6, sticky=tk.W, pady=5
+        )
+
+        # Formato de áudio
+        ttk.Label(self.audio_extraction_frame, text="Formato de Áudio:").grid(
+            row=1, column=0, sticky=tk.W, padx=(0, 5)
+        )
+        self.audio_format_var = tk.StringVar(value=AUDIO_EXTRACTION_DEFAULTS["format"])
+        self.audio_format_combo = ttk.Combobox(
+            self.audio_extraction_frame,
+            textvariable=self.audio_format_var,
+            values=list(SUPPORTED_AUDIO_FORMATS),
+            state="readonly",
+            width=15,
+        )
+        self.audio_format_combo.grid(row=1, column=1, sticky=tk.W, padx=(0, 10))
+        self.audio_format_combo.bind("<<ComboboxSelected>>", self.on_audio_format_changed)
+
+        # Qualidade de áudio
+        ttk.Label(self.audio_extraction_frame, text="Qualidade:").grid(
+            row=1, column=2, sticky=tk.W, padx=(0, 5)
+        )
+        self.audio_quality_var = tk.StringVar(value=AUDIO_EXTRACTION_DEFAULTS["quality"])
+        self.audio_quality_combo = ttk.Combobox(
+            self.audio_extraction_frame,
+            textvariable=self.audio_quality_var,
+            state="readonly",
+            width=15,
+        )
+        self.audio_quality_combo.grid(row=1, column=3, sticky=tk.W, padx=(0, 10))
+
+        # Preservar metadados
+        self.audio_metadata_var = tk.BooleanVar(value=AUDIO_EXTRACTION_DEFAULTS["preserve_metadata"])
+        self.audio_metadata_check = ttk.Checkbutton(
+            self.audio_extraction_frame,
+            text="Preservar metadados",
+            variable=self.audio_metadata_var,
+        )
+        self.audio_metadata_check.grid(
+            row=2, column=0, columnspan=2, sticky=tk.W, pady=5
+        )
+
+        # Configurar visibilidade inicial
+        self.update_audio_extraction_visibility()
+
     def create_progress_section(self, parent, row):
         """
         Cria a seção de progresso
@@ -639,6 +718,9 @@ class MainWindow:
             actions_frame, text="Limpar", command=self.clear_fields
         )
         self.clear_btn.grid(row=0, column=2, padx=5)
+
+        # Botão de atualização
+        self.update_widget.create_button(actions_frame, row=0, column=3, padx=5)
 
     def create_log_section(self, parent, row):
         """
@@ -964,6 +1046,43 @@ class MainWindow:
         else:  # Todos os Frames
             self.log_message("Modo Completo: Extrair todos os frames do vídeo")
 
+    def on_audio_extraction_changed(self):
+        """
+        Callback para quando a extração de áudio é habilitada/desabilitada
+        """
+        self.update_audio_extraction_visibility()
+
+    def on_audio_format_changed(self, event=None):
+        """
+        Callback para quando o formato de áudio é alterado
+        """
+        audio_format = self.audio_format_var.get()
+        if audio_format in AUDIO_QUALITY_PRESETS:
+            # Atualizar opções de qualidade baseadas no formato
+            quality_options = list(AUDIO_QUALITY_PRESETS[audio_format].keys())
+            self.audio_quality_combo.config(values=quality_options)
+            # Definir qualidade padrão
+            if AUDIO_EXTRACTION_DEFAULTS["quality"] in quality_options:
+                self.audio_quality_var.set(AUDIO_EXTRACTION_DEFAULTS["quality"])
+            else:
+                self.audio_quality_var.set(quality_options[0])
+
+    def update_audio_extraction_visibility(self):
+        """
+        Atualiza a visibilidade dos controles de extração de áudio
+        """
+        is_enabled = self.audio_extraction_var.get()
+        
+        # Controlar estado dos widgets de áudio
+        state = "normal" if is_enabled else "disabled"
+        self.audio_format_combo.config(state=state)
+        self.audio_quality_combo.config(state=state)
+        self.audio_metadata_check.config(state=state)
+        
+        # Se habilitado, atualizar as opções de qualidade
+        if is_enabled:
+            self.on_audio_format_changed()
+
     def on_codec_changed(self, event=None):
         """
         Callback para mudança de codec de vídeo
@@ -1184,6 +1303,15 @@ class MainWindow:
                     "specific_frames"
                 ] = self.frame_specific_var.get()
 
+        # Configurações específicas para extração de áudio
+        if hasattr(self, 'audio_extraction_var') and self.audio_extraction_var.get():
+            settings["audio_extraction_settings"] = {
+                "enabled": True,
+                "format": self.audio_format_var.get(),
+                "quality": self.audio_quality_var.get(),
+                "preserve_metadata": self.audio_metadata_var.get(),
+            }
+
         return settings
 
     def set_conversion_state(self, converting):
@@ -1307,7 +1435,39 @@ class MainWindow:
 
                 # Construir caminho de saída completo
                 input_path = Path(file_info["path"])
-                output_format = settings.get("format", "mp4")
+                
+                # Determinar formato de saída correto
+                format_name = settings.get("format", "mp4")
+                
+                # Verificar se é extração de áudio (pelo formato ou pelo checkbox)
+                is_audio_extraction = (
+                    "Extração de Áudio" in format_name or 
+                    settings.get("audio_extraction_settings", {}).get("enabled", False)
+                )
+                
+                if is_audio_extraction:
+                    # Para extração de áudio, usar o formato de áudio específico
+                    if settings.get("audio_extraction_settings", {}).get("format"):
+                        audio_format = settings["audio_extraction_settings"]["format"]
+                    else:
+                        # Formato padrão se não especificado
+                        audio_format = "MP3"
+                    
+                    # Mapear formato de áudio para extensão
+                    audio_extensions = {
+                        "MP3": "mp3",
+                        "AAC": "aac", 
+                        "WAV": "wav",
+                        "FLAC": "flac",
+                        "OGG": "ogg",
+                        "M4A": "m4a",
+                        "WMA": "wma",
+                        "OPUS": "opus"
+                    }
+                    output_format = audio_extensions.get(audio_format, "mp3")
+                else:
+                    output_format = format_name
+                
                 output_filename = f"{input_path.stem}.{output_format}"
                 output_file = os.path.join(self.output_dir_var.get(), output_filename)
 
@@ -1389,6 +1549,15 @@ class MainWindow:
         self.height_var.set(1080)
         self.progress_var.set(0)
         self.status_var.set("Pronto para conversão")
+        
+        # Limpar campos de extração de áudio
+        if hasattr(self, 'audio_extraction_var'):
+            self.audio_extraction_var.set(False)
+            self.audio_format_var.set(AUDIO_EXTRACTION_DEFAULTS["format"])
+            self.audio_quality_var.set(AUDIO_EXTRACTION_DEFAULTS["quality"])
+            self.audio_metadata_var.set(AUDIO_EXTRACTION_DEFAULTS["preserve_metadata"])
+            self.update_audio_extraction_visibility()
+        
         self.log_text.delete(1.0, tk.END)
         self.log_message("Campos limpos")
 
@@ -1557,6 +1726,75 @@ class MainWindow:
 
         # Executar verificação em thread separada
         threading.Thread(target=check_and_install, daemon=True).start()
+
+    def setup_update_system(self):
+        """
+        Configura o sistema de atualização automática
+        """
+        # Conectar callbacks do widget de atualização com o sistema de logs
+        self.update_widget.set_log_callback(self.log_message)
+        self.update_widget.set_status_callback(self.update_status_bar)
+        
+        # Verificar atualizações na inicialização (após 3 segundos)
+        self.root.after(3000, self.check_updates_on_startup)
+        
+        # Configurar verificação periódica (a cada hora = 3600000 ms)
+        self.setup_periodic_update_check()
+
+    def check_updates_on_startup(self):
+        """
+        Verifica atualizações na inicialização da aplicação
+        """
+        def check_updates():
+            try:
+                self.log_message("🔍 Verificando atualizações disponíveis...")
+                self.update_status_bar("Verificando atualizações...")
+                
+                # Verificar se há atualizações disponíveis
+                has_update = self.update_checker.check_for_updates()
+                
+                if has_update:
+                    latest_version = self.update_checker.get_latest_version()
+                    self.log_message(f"✨ Nova versão disponível: {latest_version}")
+                    self.update_status_bar(f"Atualização disponível: {latest_version}")
+                    
+                    # Notificar o widget sobre a atualização disponível
+                    self.root.after(0, lambda: self.update_widget.show_update_notification(latest_version))
+                else:
+                    self.log_message("✓ Aplicação está atualizada")
+                    self.update_status_bar("Pronto para conversão")
+                    
+            except Exception as e:
+                self.log_message(f"⚠️ Erro ao verificar atualizações: {str(e)}")
+                self.update_status_bar("Erro na verificação de atualizações")
+        
+        # Executar em thread separada para não bloquear a interface
+        threading.Thread(target=check_updates, daemon=True).start()
+
+    def setup_periodic_update_check(self):
+        """
+        Configura verificação periódica de atualizações (a cada hora)
+        """
+        def periodic_check():
+            try:
+                has_update = self.update_checker.check_for_updates()
+                if has_update:
+                    latest_version = self.update_checker.get_latest_version()
+                    self.log_message(f"🔔 Nova atualização detectada: {latest_version}")
+                    # Notificar o widget sobre a atualização
+                    self.root.after(0, lambda: self.update_widget.show_update_notification(latest_version))
+            except Exception as e:
+                # Log silencioso para verificações periódicas
+                pass
+        
+        def schedule_next_check():
+            # Executar verificação em thread separada
+            threading.Thread(target=periodic_check, daemon=True).start()
+            # Agendar próxima verificação em 1 hora (3600000 ms)
+            self.root.after(3600000, schedule_next_check)
+        
+        # Iniciar o ciclo de verificações periódicas
+        schedule_next_check()
 
     def _setup_queue_callbacks(self):
         """

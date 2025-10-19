@@ -180,3 +180,27 @@ exports/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Test files and temporary directories
+test_temp/
+test_downloads/
+temp_test_*/
+*.test.log
+test_output_*/
+
+# Update system temporary files
+update_temp/
+*.update.tmp
+update_backup/
+restart_script_*.bat
+restart_script_*.sh
+
+# Backup files created during updates
+*.backup
+backup_*/
+*.bak.*
+
+# Downloaded update files
+*.update.zip
+*.update.exe
+update_cache/

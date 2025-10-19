@@ -15,7 +15,7 @@ Instalador automático que configura todo o ambiente necessário para o VideoCon
 - ✅ **Linux** (Ubuntu, Debian, CentOS, Fedora, Arch)
 - ✅ **macOS** (Intel/Apple Silicon)
 
-### 🔧 **Componentes Gerenciados**
+### 🔧 **Componentes Gerenciados**--
 - 🐍 **Python 3.13** - Instalação e configuração automática
 - 🚀 **NVIDIA CUDA** - Detecção de GPU e instalação compatível
 - 🎬 **FFmpeg/FFprobe** - Download e configuração de PATH
