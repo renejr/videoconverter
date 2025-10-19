@@ -1,0 +1,425 @@
+"""
+Serviço de Autenticação - User Service
+Sistema de Identidade e Transações - Domínio A
+
+Este módulo contém a lógica de negócio para
+operações relacionadas à autenticação e autorização.
+"""
+
+from typing import Optional, Dict, Any
+from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+
+from models.user import User
+from schemas.auth import LoginResponseSchema
+from schemas.user import UserCreateSchema
+from api.exceptions import (
+    InvalidCredentialsError,
+    UserNotFoundError,
+    InactiveUserError,
+    TokenExpiredError
+)
+from config.settings import settings
+from services.user_service import UserService
+
+# Configuração para hash de senhas
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+class AuthService:
+    """
+    Serviço para autenticação e autorização
+    
+    Este serviço contém toda a lógica de negócio relacionada
+    à autenticação, autorização e gerenciamento de sessões.
+    """
+    
+    def __init__(self):
+        """
+        Inicializa o serviço de autenticação
+        """
+        self.pwd_context = pwd_context
+        self.user_service = UserService()
+    
+    def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
+        """
+        Cria um token de acesso JWT
+        
+        Args:
+            data: Dados a serem incluídos no token
+            expires_delta: Tempo de expiração do token
+            
+        Returns:
+            str: Token JWT
+        """
+        to_encode = data.copy()
+        
+        if expires_delta:
+            expire = datetime.utcnow() + expires_delta
+        else:
+            expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+        
+        to_encode.update({"exp": expire})
+        
+        encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
+        return encoded_jwt
+    
+    def verify_token(self, token: str) -> Dict[str, Any]:
+        """
+        Verifica e decodifica um token JWT
+        
+        Args:
+            token: Token JWT a ser verificado
+            
+        Returns:
+            Dict[str, Any]: Dados decodificados do token
+            
+        Raises:
+            TokenExpiredError: Se o token estiver expirado
+            InvalidCredentialsError: Se o token for inválido
+        """
+        try:
+            payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+            return payload
+        except JWTError:
+            raise InvalidCredentialsError("Token inválido")
+    
+    async def authenticate_user(
+        self,
+        db: Session,
+        email: str,
+        password: str,
+        client_ip: str = None,
+        user_agent: str = None
+    ) -> LoginResponseSchema:
+        """
+        Autentica um usuário
+        
+        Args:
+            db: Sessão do banco de dados
+            email: Email do usuário
+            password: Senha do usuário
+            client_ip: IP do cliente
+            user_agent: User agent do cliente
+            
+        Returns:
+            LoginResponseSchema: Dados de autenticação
+            
+        Raises:
+            InvalidCredentialsError: Se as credenciais forem inválidas
+            InactiveUserError: Se o usuário estiver inativo
+        """
+        # Buscar usuário por email
+        user = await self.user_service.get_user_by_email(db, email)
+        if not user:
+            raise InvalidCredentialsError("Email ou senha incorretos")
+        
+        # Verificar se a credencial existe
+        if not user.credential:
+            raise InvalidCredentialsError("Email ou senha incorretos")
+        
+        # Verificar senha
+        if not self.pwd_context.verify(password, user.credential.password_hash):
+            raise InvalidCredentialsError("Email ou senha incorretos")
+        
+        # Verificar se o usuário está ativo
+        if not user.is_active:
+            raise InactiveUserError("Usuário inativo")
+        
+        # Criar token de acesso
+        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+        access_token = self.create_access_token(
+            data={"sub": str(user.id), "email": user.email},
+            expires_delta=access_token_expires
+        )
+        
+        # Atualizar último login
+        user.last_login_at = datetime.utcnow()
+        user.last_login_ip = client_ip
+        db.commit()
+        
+        return LoginResponseSchema(
+            access_token=access_token,
+            refresh_token="",  # TODO: Implementar refresh token
+            token_type="bearer",
+            expires_in=settings.access_token_expire_minutes * 60,
+            user={
+                "id": user.id,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "full_name": user.full_name,
+                "is_active": user.is_active,
+                "is_verified": user.is_verified,
+                "created_at": user.created_at.isoformat() if user.created_at else None
+            },
+            session_id="",  # TODO: Implementar session_id
+            requires_2fa=False
+        )
+    
+    async def register_user(
+        self,
+        db: Session,
+        user_data: UserCreateSchema,
+        client_ip: str = None,
+        user_agent: str = None
+    ) -> User:
+        """
+        Registra um novo usuário
+        
+        Args:
+            db: Sessão do banco de dados
+            user_data: Dados do usuário
+            client_ip: IP do cliente
+            user_agent: User agent do cliente
+            
+        Returns:
+            User: Usuário criado
+        """
+        # Criar usuário usando o UserService
+        new_user = await self.user_service.create_user(db, user_data)
+        
+        # TODO: Enviar email de verificação
+        
+        return new_user
+    
+    async def get_current_user(self, db: Session, token: str) -> User:
+        """
+        Obtém o usuário atual baseado no token
+        
+        Args:
+            db: Sessão do banco de dados
+            token: Token JWT
+            
+        Returns:
+            User: Usuário autenticado
+            
+        Raises:
+            InvalidCredentialsError: Se o token for inválido
+            UserNotFoundError: Se o usuário não for encontrado
+        """
+        # Verificar token
+        payload = self.verify_token(token)
+        user_id = payload.get("sub")
+        
+        if user_id is None:
+            raise InvalidCredentialsError("Token inválido")
+        
+        # Buscar usuário
+        user = await self.user_service.get_user_by_id(db, int(user_id))
+        
+        return user
+    
+    async def change_password(
+        self,
+        db: Session,
+        user: User,
+        current_password: str,
+        new_password: str
+    ) -> None:
+        """
+        Altera a senha do usuário
+        
+        Args:
+            db: Sessão do banco de dados
+            user: Usuário
+            current_password: Senha atual
+            new_password: Nova senha
+            
+        Raises:
+            InvalidCredentialsError: Se a senha atual estiver incorreta
+        """
+        # Verificar senha atual
+        if not self.pwd_context.verify(current_password, user.password_hash):
+            raise InvalidCredentialsError("Senha atual incorreta")
+        
+        # Atualizar senha
+        await self.user_service.update_user_password(db, user.id, new_password)
+    
+    async def request_password_reset(self, db: Session, email: str) -> None:
+        """
+        Solicita reset de senha
+        
+        Args:
+            db: Sessão do banco de dados
+            email: Email do usuário
+        """
+        # Buscar usuário
+        user = await self.user_service.get_user_by_email(db, email)
+        if not user:
+            # Não revelar se o email existe ou não
+            return
+        
+        # TODO: Gerar token de reset e enviar email
+        pass
+    
+    async def reset_password(self, db: Session, token: str, new_password: str) -> None:
+        """
+        Reseta a senha usando token
+        
+        Args:
+            db: Sessão do banco de dados
+            token: Token de reset
+            new_password: Nova senha
+        """
+        # TODO: Implementar reset de senha com token
+        pass
+    
+    async def request_email_verification(self, db: Session, email: str) -> None:
+        """
+        Solicita verificação de email
+        
+        Args:
+            db: Sessão do banco de dados
+            email: Email do usuário
+        """
+        # TODO: Implementar verificação de email
+        pass
+    
+    async def verify_email(self, db: Session, token: str) -> None:
+        """
+        Verifica email usando token
+        
+        Args:
+            db: Sessão do banco de dados
+            token: Token de verificação
+        """
+        # TODO: Implementar verificação de email
+        pass
+    
+    async def logout_user(self, db: Session, user_id: int, session_id: str = None) -> None:
+        """
+        Faz logout do usuário
+        
+        Args:
+            db: Sessão do banco de dados
+            user_id: ID do usuário
+            session_id: ID da sessão (opcional)
+        """
+        # TODO: Implementar logout com invalidação de sessão
+        pass
+    
+    async def refresh_access_token(self, db: Session, refresh_token: str) -> LoginResponseSchema:
+        """
+        Renova token de acesso
+        
+        Args:
+            db: Sessão do banco de dados
+            refresh_token: Token de refresh
+            
+        Returns:
+            LoginResponseSchema: Novos tokens
+        """
+        # TODO: Implementar refresh token
+        raise NotImplementedError("Refresh token não implementado ainda")
+    
+    async def setup_two_factor(self, db: Session, user: User, method: str) -> dict:
+        """
+        Configura autenticação de dois fatores
+        
+        Args:
+            db: Sessão do banco de dados
+            user: Usuário
+            method: Método de 2FA
+            
+        Returns:
+            dict: Dados da configuração 2FA
+        """
+        # TODO: Implementar 2FA
+        raise NotImplementedError("2FA não implementado ainda")
+    
+    async def verify_two_factor(self, db: Session, user: User, code: str) -> None:
+        """
+        Verifica código 2FA
+        
+        Args:
+            db: Sessão do banco de dados
+            user: Usuário
+            code: Código 2FA
+        """
+        # TODO: Implementar verificação 2FA
+        pass
+    
+    async def disable_two_factor(self, db: Session, user: User, password: str) -> None:
+        """
+        Desabilita 2FA
+        
+        Args:
+            db: Sessão do banco de dados
+            user: Usuário
+            password: Senha do usuário
+        """
+        # TODO: Implementar desabilitação 2FA
+        pass
+    
+    async def get_user_sessions(self, db: Session, user_id: int) -> list:
+        """
+        Obtém sessões do usuário
+        
+        Args:
+            db: Sessão do banco de dados
+            user_id: ID do usuário
+            
+        Returns:
+            list: Lista de sessões
+        """
+        # Por enquanto, retornamos uma sessão fictícia baseada no usuário atual
+        # TODO: Implementar sistema completo de gerenciamento de sessões
+        from datetime import datetime, timedelta
+        
+        current_time = datetime.utcnow()
+        
+        # Criar uma sessão fictícia para o usuário atual
+        session_data = {
+            "session_id": f"session_{user_id}_{int(current_time.timestamp())}",
+            "device_id": f"device_{user_id}",
+            "device_name": "Navegador Web",
+            "device_type": "web",
+            "ip_address": "127.0.0.1",
+            "location": "Local",
+            "is_current": True,
+            "created_at": current_time,
+            "last_activity": current_time,
+            "expires_at": current_time + timedelta(hours=24)
+        }
+        
+        return [session_data]
+    
+    async def revoke_session(self, db: Session, user_id: int, session_id: str) -> None:
+        """
+        Revoga uma sessão
+        
+        Args:
+            db: Sessão do banco de dados
+            user_id: ID do usuário
+            session_id: ID da sessão
+        """
+        # TODO: Implementar revogação de sessão
+        pass
+    
+    async def revoke_all_sessions(self, db: Session, user_id: int) -> None:
+        """
+        Revoga todas as sessões do usuário
+        
+        Args:
+            db: Sessão do banco de dados
+            user_id: ID do usuário
+        """
+        # TODO: Implementar revogação de todas as sessões
+        pass
+    
+    async def get_security_events(self, db: Session, user_id: int) -> list:
+        """
+        Obtém eventos de segurança do usuário
+        
+        Args:
+            db: Sessão do banco de dados
+            user_id: ID do usuário
+            
+        Returns:
+            list: Lista de eventos de segurança
+        """
+        # TODO: Implementar log de eventos de segurança
+        return []
