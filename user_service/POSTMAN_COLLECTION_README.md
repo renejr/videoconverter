@@ -4,6 +4,23 @@
 
 Esta coleção contém todos os endpoints da API do serviço de usuários, organizados por funcionalidade para facilitar os testes e desenvolvimento.
 
+## ✅ Status dos Endpoints
+
+**Todos os endpoints principais estão funcionais e testados:**
+
+### 🟢 Endpoints Funcionais (Status 200)
+- ✅ `POST /api/v1/auth/register` - Registro de usuário
+- ✅ `POST /api/v1/auth/login/oauth2` - Login OAuth2
+- ✅ `GET /api/v1/auth/me` - Dados do usuário autenticado
+- ✅ `GET /api/v1/auth/sessions` - Sessões ativas do usuário
+- ✅ `GET /api/v1/users/me` - Perfil detalhado do usuário
+
+### 🔧 Correções Implementadas
+- **Endpoint `/api/v1/auth/sessions`**: Corrigido erro 500 → Agora retorna status 200
+- **Endpoint `/api/v1/users/me`**: Corrigido erro 500 → Agora retorna status 200
+- **Schema UserDetailSchema**: Ajustado para corresponder ao modelo User
+- **AuthService**: Implementado método `get_user_sessions` funcional
+
 ## 🚀 Como Importar a Coleção
 
 ### 1. Abrir o Postman
