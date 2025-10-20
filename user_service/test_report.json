@@ -1,0 +1,165 @@
+{
+  "timestamp": "2025-10-19T18:15:28.498945",
+  "summary": {
+    "total_tests": 12,
+    "successful_tests": 8,
+    "failed_tests": 4,
+    "success_rate": 66.66666666666666
+  },
+  "test_results": {
+    "GET /": {
+      "endpoint": "/",
+      "method": "GET",
+      "status_code": 200,
+      "success": true,
+      "timestamp": "2025-10-19T18:15:26.827019",
+      "response_data": {
+        "message": "User Service API",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/api/v1/health"
+      },
+      "error": null
+    },
+    "GET /api/v1/health": {
+      "endpoint": "/api/v1/health",
+      "method": "GET",
+      "status_code": 200,
+      "success": true,
+      "timestamp": "2025-10-19T18:15:26.832502",
+      "response_data": {
+        "status": "healthy",
+        "version": "1.0.0",
+        "service": "user-service"
+      },
+      "error": null
+    },
+    "POST /api/v1/auth/register": {
+      "endpoint": "/api/v1/auth/register",
+      "method": "POST",
+      "status_code": 201,
+      "success": true,
+      "timestamp": "2025-10-19T18:15:27.287172",
+      "response_data": {
+        "created_at": "2025-10-19T21:15:27",
+        "updated_at": "2025-10-19T21:15:27",
+        "email": "teste.20251019181526@exemplo.com",
+        "first_name": "João",
+        "last_name": "Silva",
+        "phone": null,
+        "date_of_birth": null,
+        "gender": null,
+        "country": null,
+        "state": null,
+        "city": null,
+        "timezone": "America/Sao_Paulo",
+        "language": null,
+        "id": 8,
+        "is_active": true,
+        "is_verified": false,
+        "is_premium": false,
+        "last_login_at": null,
+        "profile_completion": 37
+      },
+      "error": null
+    },
+    "POST /api/v1/auth/login": {
+      "endpoint": "/api/v1/auth/login",
+      "method": "POST",
+      "status_code": 200,
+      "success": true,
+      "timestamp": "2025-10-19T18:15:27.688224",
+      "response_data": {
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4IiwiZW1haWwiOiJ0ZXN0ZS4yMDI1MTAxOTE4MTUyNkBleGVtcGxvLmNvbSIsImV4cCI6MTc2MDkxMDMyN30.4dxcTxqJl5QtBJJzM1UNshc4ZgL6GEXOjgDQTUfkGHA",
+        "refresh_token": "",
+        "token_type": "bearer",
+        "expires_in": 1800,
+        "user": {
+          "id": 8,
+          "email": "teste.20251019181526@exemplo.com",
+          "first_name": "João",
+          "last_name": "Silva",
+          "full_name": "João Silva",
+          "is_active": true,
+          "is_verified": false,
+          "created_at": "2025-10-19T21:15:27"
+        },
+        "session_id": "",
+        "requires_2fa": false
+      },
+      "error": null
+    },
+    "POST /api/v1/auth/login/oauth2": {
+      "endpoint": "/api/v1/auth/login/oauth2",
+      "method": "POST",
+      "status_code": 500,
+      "success": false,
+      "timestamp": "2025-10-19T18:15:27.746947",
+      "response_data": null,
+      "error": null
+    },
+    "GET /api/v1/auth/me": {
+      "endpoint": "/api/v1/auth/me",
+      "method": "GET",
+      "status_code": 0,
+      "success": false,
+      "timestamp": "2025-10-19T18:15:27.771671",
+      "response_data": null,
+      "error": ""
+    },
+    "GET /api/v1/users/me": {
+      "endpoint": "/api/v1/users/me",
+      "method": "GET",
+      "status_code": 500,
+      "success": false,
+      "timestamp": "2025-10-19T18:15:28.105466",
+      "response_data": null,
+      "error": null
+    },
+    "GET /api/v1/auth/sessions": {
+      "endpoint": "/api/v1/auth/sessions",
+      "method": "GET",
+      "status_code": 0,
+      "success": false,
+      "timestamp": "2025-10-19T18:15:28.139300",
+      "response_data": null,
+      "error": ""
+    },
+    "POST /api/v1/auth/reset-password/request": {
+      "endpoint": "/api/v1/auth/reset-password/request",
+      "method": "POST",
+      "status_code": 204,
+      "success": true,
+      "timestamp": "2025-10-19T18:15:28.449840",
+      "response_data": null,
+      "error": null
+    },
+    "POST /api/v1/auth/verify-email/request": {
+      "endpoint": "/api/v1/auth/verify-email/request",
+      "method": "POST",
+      "status_code": 204,
+      "success": true,
+      "timestamp": "2025-10-19T18:15:28.460751",
+      "response_data": null,
+      "error": null
+    },
+    "GET /api/v1/users/search": {
+      "endpoint": "/api/v1/users/search",
+      "method": "GET",
+      "status_code": 403,
+      "success": true,
+      "timestamp": "2025-10-19T18:15:28.468232",
+      "response_data": null,
+      "error": null
+    },
+    "GET /api/v1/users/stats": {
+      "endpoint": "/api/v1/users/stats",
+      "method": "GET",
+      "status_code": 403,
+      "success": true,
+      "timestamp": "2025-10-19T18:15:28.473794",
+      "response_data": null,
+      "error": null
+    }
+  }
+}
