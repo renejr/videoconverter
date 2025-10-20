@@ -8,6 +8,7 @@ operações relacionadas à autenticação e autorização.
 
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
+import time
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -184,6 +185,64 @@ class AuthService:
         # TODO: Enviar email de verificação
         
         return new_user
+
+    async def register_and_authenticate_user(
+        self,
+        db: Session,
+        user_data: UserCreateSchema,
+        client_ip: str = None,
+        user_agent: str = None
+    ) -> LoginResponseSchema:
+        """
+        Registra um novo usuário e retorna tokens de autenticação
+        
+        Args:
+            db: Sessão do banco de dados
+            user_data: Dados do usuário
+            client_ip: IP do cliente
+            user_agent: User agent do cliente
+            
+        Returns:
+            LoginResponseSchema: Dados de autenticação com tokens
+        """
+        # Registrar usuário
+        new_user = await self.register_user(db, user_data, client_ip, user_agent)
+        
+        # Gerar tokens de acesso para o usuário recém-criado
+        access_token = self.create_access_token(data={"sub": str(new_user.id)})
+        # Criar refresh token com tempo de expiração maior
+        refresh_token_expires = timedelta(days=30)  # 30 dias
+        refresh_token = self.create_access_token(
+            data={"sub": str(new_user.id), "type": "refresh"}, 
+            expires_delta=refresh_token_expires
+        )
+        
+        # TODO: Implementar criação de sessão do usuário
+        # await self.create_user_session(
+        #     db, new_user.id, access_token, client_ip, user_agent
+        # )
+        
+        # Retornar resposta de login
+        return LoginResponseSchema(
+            user={
+                "id": new_user.id,
+                "email": new_user.email,
+                "first_name": new_user.first_name,
+                "last_name": new_user.last_name,
+                "full_name": new_user.full_name,
+                "is_active": new_user.is_active,
+                "is_verified": new_user.is_verified,
+                "is_premium": new_user.is_premium,
+                "profile_completion": new_user.profile_completion,
+                "created_at": new_user.created_at.isoformat() if new_user.created_at else None
+            },
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=settings.access_token_expire_minutes * 60,
+            session_id=f"session_{new_user.id}_{int(time.time())}",  # Gerar session_id temporário
+            requires_2fa=False
+        )
     
     async def get_current_user(self, db: Session, token: str) -> User:
         """

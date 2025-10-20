@@ -66,18 +66,18 @@ user_service = UserService()
 
 @router.post(
     "/register",
-    response_model=UserResponseSchema,
+    response_model=LoginResponseSchema,
     status_code=status.HTTP_201_CREATED,
     summary="Registrar novo usuário",
-    description="Registra um novo usuário no sistema e envia email de verificação"
+    description="Registra um novo usuário no sistema e retorna tokens de autenticação"
 )
 async def register(
     user_data: RegisterSchema,
     request: Request,
     db: DatabaseSession
-) -> UserResponseSchema:
+) -> LoginResponseSchema:
     """
-    Registra um novo usuário no sistema
+    Registra um novo usuário no sistema e retorna tokens de autenticação
     
     Args:
         user_data: Dados do usuário para registro
@@ -85,7 +85,7 @@ async def register(
         db: Sessão do banco de dados
         
     Returns:
-        UserResponseSchema: Dados do usuário criado
+        LoginResponseSchema: Dados do usuário criado com tokens de autenticação
         
     Raises:
         UserAlreadyExistsError: Se email ou CPF já existir
@@ -109,10 +109,12 @@ async def register(
         # CPF não está presente no RegisterSchema, então não incluímos
     )
     
-    # Registrar usuário usando o serviço de autenticação
-    new_user = await auth_service.register_user(db, user_create_data, client_ip, user_agent)
+    # Registrar usuário e autenticar automaticamente
+    auth_result = await auth_service.register_and_authenticate_user(
+        db, user_create_data, client_ip, user_agent
+    )
     
-    return UserResponseSchema.from_orm(new_user)
+    return auth_result
 
 
 @router.post(

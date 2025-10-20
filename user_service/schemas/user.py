@@ -289,6 +289,11 @@ class UserResponseSchema(UserBaseSchema, TimestampMixin):
         example=123
     )
     
+    full_name: str = Field(
+        description="Nome completo do usuário (first_name + last_name)",
+        example="João Silva"
+    )
+    
     is_active: bool = Field(
         description="Indica se o usuário está ativo",
         example=True
