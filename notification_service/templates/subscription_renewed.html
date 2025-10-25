@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #28a745; font-size: 28px; margin-bottom: 15px;">
+        🔄 Assinatura Renovada!
+    </h2>
+    <p style="color: #6c757d; font-size: 18px;">
+        Seu {{ plan_name }} continua ativo
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+            border-radius: 12px; padding: 25px; margin: 25px 0; color: white; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+        ✅ Renovação Processada
+    </h3>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        Renovada em {{ renewal_date }}
+    </p>
+</div>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Olá <strong>{{ customer_name }}</strong>,
+</p>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Sua assinatura do <strong>{{ plan_name }}</strong> foi renovada automaticamente com sucesso. 
+    Você continua com acesso completo a todos os recursos premium.
+</p>
+
+<div style="background: #ffffff; border: 2px solid #28a745; border-radius: 12px; padding: 25px; margin: 25px 0;">
+    <h4 style="color: #28a745; margin-bottom: 20px; font-size: 20px; text-align: center;">
+        📋 Detalhes da Renovação
+    </h4>
+    
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 1px solid #f8f9fa;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057; width: 40%;">Plano:</td>
+            <td style="padding: 12px 0; color: #28a745; font-weight: 600;">{{ plan_name }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f8f9fa;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057;">Valor Cobrado:</td>
+            <td style="padding: 12px 0; color: #495057;">{{ amount_charged }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f8f9fa;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057;">Período:</td>
+            <td style="padding: 12px 0; color: #495057;">{{ billing_period }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px 0; font-weight: 500; color: #495057;">Próxima Renovação:</td>
+            <td style="padding: 12px 0; color: #495057;">{{ next_renewal_date }}</td>
+        </tr>
+    </table>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ invoice_url }}" class="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                                    color: white; text-decoration: none; padding: 15px 30px; 
+                                                    border-radius: 8px; display: inline-block; font-weight: 500; margin-right: 15px;">
+        📄 Ver Recibo
+    </a>
+    <a href="{{ manage_subscription_url }}" class="button" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+                                                                 color: white; text-decoration: none; padding: 15px 30px; 
+                                                                 border-radius: 8px; display: inline-block; font-weight: 500;">
+        ⚙️ Gerenciar Assinatura
+    </a>
+</div>
+
+<div class="info-box">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        🎯 Seus Benefícios Continuam
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+        {% for feature in plan_features %}
+        <li style="margin-bottom: 8px;">{{ feature }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #155724; margin-bottom: 15px; font-size: 16px;">
+        💳 Informações de Pagamento
+    </h4>
+    <p style="color: #155724; margin: 0;">
+        Cobrança processada via {{ payment_method }} terminado em {{ card_last_digits }}.
+        <br>Recibo disponível em sua conta.
+    </p>
+</div>
+
+<p style="font-size: 14px; color: #6c757d; margin-top: 30px; text-align: center;">
+    Obrigado por continuar conosco! Se tiver dúvidas, 
+    <a href="mailto:{{ support_email }}" style="color: #667eea;">entre em contato</a>.
+</p>
+{% endblock %}

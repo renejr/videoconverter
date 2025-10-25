@@ -1,10 +1,9 @@
-import React, { forwardRef } from 'react'
+import React, { forwardRef, useId } from 'react'
 import { cn } from '@/lib/utils'
 import type { InputProps } from '@/types'
 
 /**
- * Componente Input reutilizável
- * Suporta diferentes tipos, estados de erro e ícones
+ * Componente de input reutilizável com suporte a ícones e validação
  */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ 
@@ -17,7 +16,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     rightIcon,
     ...props 
   }, ref) => {
-    const inputId = props.id || `input-${Math.random().toString(36).substr(2, 9)}`
+    const generatedId = useId()
+    const inputId = props.id || `input-${generatedId}`
     
     return (
       <div className="w-full">
@@ -45,8 +45,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             className={cn(
               'block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm',
-              leftIcon && 'pl-10',
-              rightIcon && 'pr-10',
+              leftIcon && 'pl-12',
+              rightIcon && 'pr-12',
               error && 'border-red-300 focus:ring-red-500 focus:border-red-500',
               className
             )}

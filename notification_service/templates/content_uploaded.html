@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #17a2b8; font-size: 28px; margin-bottom: 15px;">
+        📹 Upload Concluído
+    </h2>
+    <p style="color: #6c757d; font-size: 18px;">
+        Seu conteúdo foi enviado com sucesso
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); 
+            border-radius: 12px; padding: 25px; margin: 25px 0; color: white; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+        ✅ Upload Bem-sucedido
+    </h3>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        "{{ content_title }}" foi recebido
+    </p>
+</div>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Olá <strong>{{ name }}</strong>,
+</p>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Seu arquivo "<strong>{{ content_title }}</strong>" foi enviado com sucesso para o {{ platform_name }}. 
+    O processamento será iniciado em breve.
+</p>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ content_url }}" class="button" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); 
+                                                     color: white; text-decoration: none; padding: 15px 30px; 
+                                                     border-radius: 8px; display: inline-block; font-weight: 500; font-size: 18px; margin-right: 15px;">
+        📊 Ver Status
+    </a>
+    <a href="{{ content_url }}/edit" class="button" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); 
+                                                         color: white; text-decoration: none; padding: 15px 30px; 
+                                                         border-radius: 8px; display: inline-block; font-weight: 500;">
+        ✏️ Editar Detalhes
+    </a>
+</div>
+
+<div class="info-box">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        📋 Detalhes do Upload
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 8px;"><strong>ID:</strong> {{ content_id }}</li>
+        <li style="margin-bottom: 8px;"><strong>Título:</strong> {{ content_title }}</li>
+        <li style="margin-bottom: 8px;"><strong>Status:</strong> Upload concluído</li>
+        <li style="margin-bottom: 8px;"><strong>Próximo passo:</strong> Processamento</li>
+        <li>Você será notificado quando o processamento for concluído</li>
+    </ul>
+</div>
+
+<div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #0c5460; margin-bottom: 15px; font-size: 16px;">
+        ⏱️ O que acontece agora?
+    </h4>
+    <ol style="margin: 0; padding-left: 20px; color: #0c5460;">
+        <li style="margin-bottom: 8px;">Seu arquivo está na fila de processamento</li>
+        <li style="margin-bottom: 8px;">O processamento será iniciado automaticamente</li>
+        <li style="margin-bottom: 8px;">Você receberá notificações sobre o progresso</li>
+        <li style="margin-bottom: 8px;">Uma vez processado, o conteúdo estará disponível</li>
+        <li>Você poderá publicar ou baixar o resultado final</li>
+    </ol>
+</div>
+
+<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #856404; margin-bottom: 15px; font-size: 16px;">
+        💡 Dicas Enquanto Aguarda
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #856404;">
+        <li style="margin-bottom: 8px;">Complete as informações do seu conteúdo (título, descrição, tags)</li>
+        <li style="margin-bottom: 8px;">Defina as configurações de privacidade</li>
+        <li style="margin-bottom: 8px;">Prepare materiais promocionais para quando publicar</li>
+        <li style="margin-bottom: 8px;">Verifique suas configurações de notificação</li>
+        <li>Explore outros recursos da plataforma</li>
+    </ul>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ content_url }}/queue" style="color: #17a2b8; text-decoration: none; margin-right: 20px;">
+        📋 Ver Fila de Processamento
+    </a>
+    <a href="/upload" style="color: #17a2b8; text-decoration: none; margin-right: 20px;">
+        📤 Enviar Mais Conteúdo
+    </a>
+    <a href="/dashboard" style="color: #17a2b8; text-decoration: none;">
+        🏠 Painel Principal
+    </a>
+</div>
+
+<div style="text-align: center; margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px;">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        🎯 Tempo Estimado de Processamento
+    </h4>
+    <p style="color: #6c757d; margin: 0; font-size: 16px;">
+        O processamento geralmente leva entre 5-30 minutos, dependendo do tamanho e complexidade do arquivo. 
+        Você será notificado assim que estiver pronto!
+    </p>
+</div>
+
+<p style="font-size: 14px; color: #6c757d; margin-top: 30px; text-align: center;">
+    Obrigado por usar o {{ platform_name }}! 
+    Estamos processando seu conteúdo com o máximo cuidado e qualidade.
+</p>
+{% endblock %}

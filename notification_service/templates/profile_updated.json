@@ -1,0 +1,10 @@
+{
+  "subject": "Perfil atualizado - {{platform_name}}",
+  "description": "Confirmação de atualização de perfil",
+  "variables": [
+    "name",
+    "changes",
+    "platform_name",
+    "timestamp"
+  ]
+}

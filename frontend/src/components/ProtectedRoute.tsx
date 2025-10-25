@@ -1,10 +1,10 @@
 import React, { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import type { ProtectedRouteProps } from '@/types'
 
 /**
- * Componente para proteção de rotas
+ * Componente para proteger rotas que requerem autenticação
  * Redireciona usuários não autenticados para a página de login
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -14,13 +14,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, isLoading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!isLoading) {
       // Se não há usuário, redireciona para login
       if (!user) {
-        const currentPath = window.location.pathname
-        const loginUrl = `${redirectTo}?redirect=${encodeURIComponent(currentPath)}`
+        const loginUrl = `${redirectTo}?redirect=${encodeURIComponent(pathname)}`
         router.push(loginUrl)
         return
       }

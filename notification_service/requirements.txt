@@ -1,0 +1,44 @@
+# FastAPI e servidor
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Banco de dados
+sqlalchemy==2.0.23
+pymysql==1.1.0
+alembic==1.12.1
+
+# Redis para Event Bus
+redis==5.0.1
+aioredis==2.0.1
+
+# Email
+aiosmtplib==3.0.1
+email-validator==2.1.0
+
+# Templates
+jinja2==3.1.2
+
+# Validação e configuração
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Utilitários
+python-multipart==0.0.6
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Logging e monitoramento
+structlog==23.2.0
+
+# Desenvolvimento
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Processamento assíncrono
+celery==5.3.4
+kombu==5.3.4
+
+# Utilitários gerais
+python-dotenv==1.0.0
+pytz==2023.3

@@ -51,15 +51,70 @@ class UserBaseSchema(BaseSchema):
         example="+55 11 99999-9999"
     )
     
-    date_of_birth: Optional[date] = Field(
-        None,
-        description="Data de nascimento",
+    date_of_birth: date = Field(
+        description="Data de nascimento (obrigatório - validação 18+)",
         example="1990-05-15"
     )
     
-    gender: Optional[GenderEnum] = Field(
+    cpf: str = Field(
+        min_length=11,
+        max_length=14,
+        description="CPF do usuário (obrigatório para brasileiros)",
+        example="123.456.789-00"
+    )
+    
+    gender: GenderEnum = Field(
+        description="Gênero do usuário (obrigatório)"
+    )
+    
+    # Campos de endereço (integração ViaCEP)
+    cep: str = Field(
+        min_length=8,
+        max_length=9,
+        description="CEP (obrigatório)",
+        example="01234-567"
+    )
+    
+    address_street: str = Field(
+        min_length=1,
+        max_length=255,
+        description="Logradouro (preenchido via ViaCEP)",
+        example="Rua das Flores"
+    )
+    
+    address_number: str = Field(
+        min_length=1,
+        max_length=10,
+        description="Número da residência (obrigatório)",
+        example="123"
+    )
+    
+    address_complement: Optional[str] = Field(
         None,
-        description="Gênero do usuário"
+        max_length=100,
+        description="Complemento do endereço (opcional)",
+        example="Apto 45"
+    )
+    
+    address_neighborhood: str = Field(
+        min_length=1,
+        max_length=100,
+        description="Bairro (preenchido via ViaCEP)",
+        example="Centro"
+    )
+    
+    address_city: str = Field(
+        min_length=1,
+        max_length=100,
+        description="Cidade (preenchido via ViaCEP)",
+        example="São Paulo"
+    )
+    
+    address_state: str = Field(
+        min_length=2,
+        max_length=2,
+        description="Estado - sigla (preenchido via ViaCEP)",
+        example="SP"
     )
     
     country: Optional[CountryCodeEnum] = Field(
@@ -102,18 +157,66 @@ class UserBaseSchema(BaseSchema):
             return validate_phone_number(v)
         return v
     
+    @validator('cpf')
+    def validate_cpf_field(cls, v):
+        """Valida CPF brasileiro"""
+        from ..utils.cpf_validator import CPFValidator
+        
+        if not v:
+            raise ValueError('CPF é obrigatório')
+        
+        if not CPFValidator.validate_cpf(v):
+            error_msg = CPFValidator.generate_error_message(v)
+            raise ValueError(error_msg)
+        
+        # Retorna CPF limpo (apenas números)
+        return CPFValidator.clean_cpf(v)
+    
     @validator('date_of_birth')
     def validate_birth_date(cls, v):
-        if v:
-            today = date.today()
-            age = today.year - v.year - ((today.month, today.day) < (v.month, v.day))
-            
-            if age < 13:
-                raise ValueError('Usuário deve ter pelo menos 13 anos')
-            if age > 120:
-                raise ValueError('Data de nascimento inválida')
+        """Valida data de nascimento e idade mínima"""
+        from ..utils.age_validator import AgeValidator
+        
+        if not v:
+            raise ValueError('Data de nascimento é obrigatória')
+        
+        is_valid, error_message = AgeValidator.validate_birth_date(v)
+        
+        if not is_valid:
+            raise ValueError(error_message)
         
         return v
+    
+    @validator('cep')
+    def validate_cep_field(cls, v):
+        """Valida formato do CEP"""
+        from ..services.viacep_service import ViaCEPService
+        
+        if not v:
+            raise ValueError('CEP é obrigatório')
+        
+        if not ViaCEPService.validate_cep_format(v):
+            raise ValueError('CEP deve conter exatamente 8 dígitos')
+        
+        # Retorna CEP limpo (apenas números)
+        return ViaCEPService.clean_cep(v)
+    
+    @validator('address_state')
+    def validate_state(cls, v):
+        """Valida sigla do estado brasileiro"""
+        if not v:
+            raise ValueError('Estado é obrigatório')
+        
+        valid_states = {
+            'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO',
+            'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI',
+            'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+        }
+        
+        if v.upper() not in valid_states:
+            raise ValueError('Sigla de estado inválida')
+        
+        return v.upper()
     
     @validator('first_name', 'last_name')
     def validate_names(cls, v):
@@ -145,12 +248,6 @@ class UserCreateSchema(UserBaseSchema):
         example="MinhaSenh@123"
     )
     
-    cpf: Optional[str] = Field(
-        None,
-        description="CPF do usuário (apenas para Brasil)",
-        example="123.456.789-00"
-    )
-    
     accept_terms: bool = Field(
         description="Aceite dos termos de uso",
         example=True
@@ -178,12 +275,6 @@ class UserCreateSchema(UserBaseSchema):
     def validate_required_consents(cls, v):
         if not v:
             raise ValueError('Aceite obrigatório para prosseguir')
-        return v
-    
-    @validator('cpf')
-    def validate_cpf_field(cls, v):
-        if v:
-            return validate_cpf(v)
         return v
 
 

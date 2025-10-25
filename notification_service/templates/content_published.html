@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #6f42c1; font-size: 28px; margin-bottom: 15px;">
+        🎬 Conteúdo Publicado
+    </h2>
+    <p style="color: #6c757d; font-size: 18px;">
+        Seu vídeo está ao vivo e disponível
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%); 
+            border-radius: 12px; padding: 25px; margin: 25px 0; color: white; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+        🚀 Publicação Bem-sucedida
+    </h3>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        "{{ content_title }}" está ao vivo
+    </p>
+</div>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Olá <strong>{{ name }}</strong>,
+</p>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Parabéns! Seu conteúdo "<strong>{{ content_title }}</strong>" foi publicado com sucesso 
+    e já está disponível para sua audiência.
+</p>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ content_url }}" class="button" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); 
+                                                     color: white; text-decoration: none; padding: 15px 30px; 
+                                                     border-radius: 8px; display: inline-block; font-weight: 500; font-size: 18px; margin-right: 15px;">
+        👁️ Ver Publicação
+    </a>
+    <a href="{{ share_url }}" class="button" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+                                                   color: white; text-decoration: none; padding: 15px 30px; 
+                                                   border-radius: 8px; display: inline-block; font-weight: 500;">
+        📤 Compartilhar
+    </a>
+</div>
+
+<div class="info-box">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        📋 Detalhes da Publicação
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 8px;"><strong>ID:</strong> {{ content_id }}</li>
+        <li style="margin-bottom: 8px;"><strong>Título:</strong> {{ content_title }}</li>
+        <li style="margin-bottom: 8px;"><strong>Status:</strong> Publicado e ativo</li>
+        <li style="margin-bottom: 8px;"><strong>Visibilidade:</strong> Público</li>
+        <li>Disponível para visualização imediata</li>
+    </ul>
+</div>
+
+<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #856404; margin-bottom: 15px; font-size: 16px;">
+        📈 Maximize o Alcance
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #856404;">
+        <li style="margin-bottom: 8px;">Compartilhe nas suas redes sociais</li>
+        <li style="margin-bottom: 8px;">Envie o link para seus contatos</li>
+        <li style="margin-bottom: 8px;">Adicione tags relevantes para melhor descoberta</li>
+        <li style="margin-bottom: 8px;">Monitore as métricas de engajamento</li>
+        <li>Responda aos comentários para aumentar a interação</li>
+    </ul>
+</div>
+
+<div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #0c5460; margin-bottom: 15px; font-size: 16px;">
+        🔗 Links Úteis
+    </h4>
+    <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+        <a href="{{ content_url }}" style="color: #0c5460; text-decoration: none; margin: 5px;">
+            🎬 Ver Conteúdo
+        </a>
+        <a href="{{ share_url }}" style="color: #0c5460; text-decoration: none; margin: 5px;">
+            📤 Link de Compartilhamento
+        </a>
+        <a href="{{ content_url }}/analytics" style="color: #0c5460; text-decoration: none; margin: 5px;">
+            📊 Analytics
+        </a>
+        <a href="{{ content_url }}/edit" style="color: #0c5460; text-decoration: none; margin: 5px;">
+            ✏️ Editar
+        </a>
+    </div>
+</div>
+
+<div style="text-align: center; margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px;">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        🎉 Parabéns pela Publicação!
+    </h4>
+    <p style="color: #6c757d; margin: 0; font-size: 16px;">
+        Seu conteúdo está agora disponível para o mundo. 
+        Continue criando e compartilhando conteúdo incrível!
+    </p>
+</div>
+
+<p style="font-size: 14px; color: #6c757d; margin-top: 30px; text-align: center;">
+    Obrigado por usar o {{ platform_name }}! 
+    Estamos ansiosos para ver o sucesso do seu conteúdo.
+</p>
+{% endblock %}

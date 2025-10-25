@@ -1,0 +1,12 @@
+{
+  "subject": "Falha no pagamento - {{platform_name}} ❌",
+  "description": "Notificação de falha no pagamento",
+  "variables": [
+    "name",
+    "amount",
+    "plan_name",
+    "reason",
+    "platform_name",
+    "retry_url"
+  ]
+}

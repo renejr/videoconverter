@@ -1,0 +1,10 @@
+{
+  "subject": "Autenticação de dois fatores ativada! 🔐",
+  "description": "Confirmação de ativação do 2FA",
+  "variables": [
+    "name",
+    "platform_name",
+    "security_url",
+    "timestamp"
+  ]
+}

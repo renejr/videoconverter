@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.progress-bar {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    height: 100%;
+    width: var(--progress-width);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+</style>
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #007bff; font-size: 28px; margin-bottom: 15px;">
+        ⚙️ Processamento em Andamento
+    </h2>
+    <p style="color: #6c757d; font-size: 18px;">
+        Seu conteúdo está sendo processado
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); 
+            border-radius: 12px; padding: 25px; margin: 25px 0; color: white; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+        🔄 Em Processamento
+    </h3>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        Iniciado em {{ start_time }}
+    </p>
+</div>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Olá <strong>{{ user_name }}</strong>,
+</p>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Recebemos seu arquivo "<strong>{{ content_title }}</strong>" e iniciamos o processamento. 
+    Você será notificado assim que estiver concluído.
+</p>
+
+<div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        📋 Detalhes do Processamento
+    </h4>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 1px solid #dee2e6;">
+            <td style="padding: 8px 0; font-weight: 500; color: #495057; width: 30%;">Arquivo:</td>
+            <td style="padding: 8px 0; color: #6c757d;">{{ filename }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #dee2e6;">
+            <td style="padding: 8px 0; font-weight: 500; color: #495057;">Tipo de Processamento:</td>
+            <td style="padding: 8px 0; color: #6c757d;">{{ processing_type }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #dee2e6;">
+            <td style="padding: 8px 0; font-weight: 500; color: #495057;">Tamanho:</td>
+            <td style="padding: 8px 0; color: #6c757d;">{{ file_size }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #dee2e6;">
+            <td style="padding: 8px 0; font-weight: 500; color: #495057;">Formato de Saída:</td>
+            <td style="padding: 8px 0; color: #6c757d;">{{ output_format }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #dee2e6;">
+            <td style="padding: 8px 0; font-weight: 500; color: #495057;">Prioridade:</td>
+            <td style="padding: 8px 0; color: #6c757d;">{{ priority }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; font-weight: 500; color: #495057;">Tempo Estimado:</td>
+            <td style="padding: 8px 0; color: #6c757d;">{{ estimated_time }}</td>
+        </tr>
+    </table>
+</div>
+
+{% if progress_percentage %}
+<div style="background: #e9ecef; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 16px;">
+        📊 Progresso Atual
+    </h4>
+    <div style="background: #dee2e6; border-radius: 10px; height: 20px; margin-bottom: 10px; overflow: hidden;">
+        <div class="progress-bar" style="--progress-width: {{ progress_percentage }}%;"></div>
+    </div>
+    <p style="text-align: center; margin: 0; color: #6c757d; font-weight: 500;">
+        {{ progress_percentage }}% concluído
+    </p>
+</div>
+{% endif %}
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ status_url }}" class="button" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); 
+                                                    color: white; text-decoration: none; padding: 15px 30px; 
+                                                    border-radius: 8px; display: inline-block; font-weight: 500; margin-right: 15px;">
+        📊 Verificar Status
+    </a>
+    <a href="{{ dashboard_url }}" class="button" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); 
+                                                     color: white; text-decoration: none; padding: 15px 30px; 
+                                                     border-radius: 8px; display: inline-block; font-weight: 500;">
+        🏠 Painel
+    </a>
+</div>
+
+<div class="info-box">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        ⏱️ O que acontece agora?
+    </h4>
+    <ol style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 8px;">Seu arquivo está na fila de processamento</li>
+        <li style="margin-bottom: 8px;">Você receberá atualizações de progresso por email</li>
+        <li style="margin-bottom: 8px;">Uma notificação será enviada quando concluído</li>
+        <li style="margin-bottom: 8px;">O arquivo processado ficará disponível para download</li>
+        <li>Você pode acompanhar o progresso em tempo real no painel</li>
+    </ol>
+</div>
+
+<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #856404; margin-bottom: 15px; font-size: 16px;">
+        💡 Dicas Importantes
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #856404;">
+        <li style="margin-bottom: 8px;">Mantenha esta página ou anote o ID do processamento: <strong>{{ processing_id }}</strong></li>
+        <li style="margin-bottom: 8px;">O tempo de processamento varia conforme o tamanho e complexidade do arquivo</li>
+        <li style="margin-bottom: 8px;">Você pode fechar esta página - enviaremos notificações por email</li>
+        <li>Em caso de problemas, entre em contato com nosso suporte</li>
+    </ul>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ queue_status_url }}" style="color: #007bff; text-decoration: none; margin-right: 20px;">
+        📋 Status da Fila
+    </a>
+    <a href="{{ help_url }}" style="color: #007bff; text-decoration: none; margin-right: 20px;">
+        ❓ Ajuda
+    </a>
+    <a href="{{ support_url }}" style="color: #007bff; text-decoration: none;">
+        💬 Suporte
+    </a>
+</div>
+
+<p style="font-size: 14px; color: #6c757d; margin-top: 30px; text-align: center;">
+    ID do Processamento: <strong>{{ processing_id }}</strong><br>
+    Estimativa de conclusão: {{ estimated_completion }}
+</p>
+{% endblock %}

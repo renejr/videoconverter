@@ -1,0 +1,9 @@
+{
+  "subject": "Confirme seu email - {{platform_name}}",
+  "description": "Email de verificação de conta",
+  "variables": [
+    "name",
+    "verification_url",
+    "platform_name"
+  ]
+}

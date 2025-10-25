@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #dc3545; font-size: 28px; margin-bottom: 15px;">
+        🔒 Conta Temporariamente Bloqueada
+    </h2>
+    <p style="color: #6c757d; font-size: 18px;">
+        Ação de segurança ativada
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); 
+            border-radius: 12px; padding: 25px; margin: 25px 0; color: white; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+        ⚠️ Acesso Restrito
+    </h3>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        Sua conta foi temporariamente bloqueada por motivos de segurança
+    </p>
+</div>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Olá <strong>{{ name }}</strong>,
+</p>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Sua conta no {{ platform_name }} foi temporariamente bloqueada como medida de segurança.
+</p>
+
+<div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #721c24; margin-bottom: 15px; font-size: 18px;">
+        📋 Motivo do bloqueio:
+    </h4>
+    <p style="color: #721c24; margin: 0; font-size: 16px; font-weight: 500;">
+        {{ reason }}
+    </p>
+</div>
+
+<div class="info-box">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        🛡️ Por que isso aconteceu?
+    </h4>
+    <p style="color: #6c757d; margin-bottom: 15px;">
+        Nosso sistema de segurança detectou atividade suspeita ou violação de nossas políticas. 
+        Este bloqueio é uma medida preventiva para proteger sua conta e nossos usuários.
+    </p>
+    <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 8px;">Múltiplas tentativas de login falharam</li>
+        <li style="margin-bottom: 8px;">Atividade suspeita foi detectada</li>
+        <li style="margin-bottom: 8px;">Violação das políticas de uso</li>
+        <li>Solicitação de segurança do usuário</li>
+    </ul>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ unlock_url }}" class="button" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+                                                     color: white; text-decoration: none; padding: 15px 30px; 
+                                                     border-radius: 8px; display: inline-block; font-weight: 500;">
+        🔓 Solicitar Desbloqueio
+    </a>
+</div>
+
+<div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #0c5460; margin-bottom: 15px; font-size: 16px;">
+        📞 Precisa de ajuda?
+    </h4>
+    <p style="color: #0c5460; margin-bottom: 10px;">
+        Se você acredita que este bloqueio foi um erro ou precisa de assistência imediata:
+    </p>
+    <ul style="margin: 0; padding-left: 20px; color: #0c5460;">
+        <li style="margin-bottom: 8px;">
+            Entre em contato conosco: 
+            <a href="mailto:{{ support_email }}" style="color: #0c5460; font-weight: 500;">{{ support_email }}</a>
+        </li>
+        <li style="margin-bottom: 8px;">Inclua seu nome de usuário e detalhes do problema</li>
+        <li>Nossa equipe responderá em até 24 horas</li>
+    </ul>
+</div>
+
+<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #856404; margin-bottom: 15px; font-size: 16px;">
+        🔐 Dicas de segurança:
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #856404;">
+        <li style="margin-bottom: 8px;">Use senhas fortes e únicas</li>
+        <li style="margin-bottom: 8px;">Ative a autenticação de dois fatores</li>
+        <li style="margin-bottom: 8px;">Não compartilhe suas credenciais</li>
+        <li>Mantenha seus dispositivos seguros</li>
+    </ul>
+</div>
+
+<p style="font-size: 14px; color: #6c757d; margin-top: 30px;">
+    Este email foi enviado automaticamente pelo nosso sistema de segurança. 
+    Se você não reconhece esta atividade, entre em contato conosco imediatamente.
+</p>
+{% endblock %}

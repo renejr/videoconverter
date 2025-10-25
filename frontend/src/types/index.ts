@@ -31,6 +31,17 @@ export interface RegisterData {
   confirm_password: string
   first_name: string
   last_name: string
+  phone: string
+  cpf: string
+  date_of_birth: string
+  gender: 'M' | 'F' | 'O'
+  cep: string
+  address_street: string
+  address_number: string
+  address_complement?: string
+  address_neighborhood: string
+  address_city: string
+  address_state: string
   accept_terms: boolean
   accept_privacy: boolean
 }

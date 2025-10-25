@@ -7,11 +7,11 @@ from tkinter import ttk, filedialog, messagebox, scrolledtext
 import threading
 import os
 from pathlib import Path
+import yt_dlp
 
-from core.video_converter import VideoConverterManager
-from core.queue_manager import ConversionQueueManager
-from core.ffmpeg_installer import FFmpegInstaller
-from utils.config import (
+from video_converter_module.core.queue_manager import ConversionQueueManager
+from video_converter_module.core.ffmpeg_installer import FFmpegInstaller
+from video_converter_module.utils.config import (
     SUPPORTED_OUTPUT_FORMATS,
     FPS_OPTIONS,
     RESOLUTION_PRESETS,
@@ -53,7 +53,7 @@ class MainWindow:
         # Para outros sistemas: self.root.attributes('-zoomed', True)
 
         # Inicializar componentes
-        self.video_converter = VideoConverterManager()
+        self.video_converter = ConversionQueueManager()
         self.queue_manager = ConversionQueueManager()
         self.conversion_thread = None
         self.ffmpeg_installer = FFmpegInstaller()
@@ -77,6 +77,13 @@ class MainWindow:
         # Configurar sistema de atualização
         self.setup_update_system()
 
+    def log(self, message):
+        """
+        Adiciona uma mensagem ao log da interface gráfica.
+        """
+        self.log_text.insert(tk.END, message + "\n")
+        self.log_text.see(tk.END)
+
     def setup_style(self):
         """
         Configura o estilo da aplicação
@@ -88,6 +95,14 @@ class MainWindow:
         style.configure("Title.TLabel", font=("Arial", 12, "bold"))
         style.configure("Success.TLabel", foreground="green")
         style.configure("Error.TLabel", foreground="red")
+        
+        # Configurar estilo para barra de progresso de download (vermelha)
+        style.configure("Download.Horizontal.TProgressbar", 
+                       background="red", 
+                       troughcolor="lightgray",
+                       borderwidth=1, 
+                       lightcolor="red", 
+                       darkcolor="darkred")
 
     def create_widgets(self):
         """
@@ -132,10 +147,28 @@ class MainWindow:
         file_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
         file_frame.columnconfigure(1, weight=1)
 
+        # Seção de Download de URL
+        url_frame = ttk.Frame(file_frame)
+        url_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10))
+        url_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(url_frame, text="URL do YouTube:").grid(row=0, column=0, sticky=tk.W, pady=2)
+        self.youtube_url_var = tk.StringVar()
+        self.youtube_url_entry = ttk.Entry(url_frame, textvariable=self.youtube_url_var, width=60)
+        self.youtube_url_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=5, pady=2)
+
+        ttk.Button(url_frame, text="Verificar", command=self.verify_youtube_url).grid(row=0, column=2, pady=2, padx=(0, 5))
+
+        self.resolution_var = tk.StringVar()
+        self.resolution_combobox = ttk.Combobox(url_frame, textvariable=self.resolution_var, state="disabled", width=15)
+        self.resolution_combobox.grid(row=0, column=3, padx=5, pady=2)
+
+        ttk.Button(url_frame, text="Baixar Vídeo", command=self.download_youtube_video).grid(row=0, column=4, pady=2)
+
         # Botões de seleção
         buttons_frame = ttk.Frame(file_frame)
         buttons_frame.grid(
-            row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10)
+            row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10)
         )
 
         ttk.Button(
@@ -153,7 +186,7 @@ class MainWindow:
         # Lista de arquivos
         list_frame = ttk.Frame(file_frame)
         list_frame.grid(
-            row=1, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10)
+            row=2, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10)
         )
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(0, weight=1)
@@ -186,21 +219,181 @@ class MainWindow:
 
         # Pasta de saída
         ttk.Label(file_frame, text="Pasta de Saída:").grid(
-            row=2, column=0, sticky=tk.W, pady=2
+            row=3, column=0, sticky=tk.W, pady=2
         )
         self.output_dir_var = tk.StringVar()
         self.output_dir_entry = ttk.Entry(
             file_frame, textvariable=self.output_dir_var, width=50
         )
         self.output_dir_entry.grid(
-            row=2, column=1, sticky=(tk.W, tk.E), padx=(5, 5), pady=2
+            row=3, column=1, sticky=(tk.W, tk.E), padx=(5, 5), pady=2
         )
         ttk.Button(file_frame, text="Procurar...", command=self.browse_output_dir).grid(
-            row=2, column=2, pady=2
+            row=3, column=2, pady=2
         )
 
         # Lista interna de arquivos
         self.selected_files = []
+
+    def download_youtube_video(self):
+        """
+        Inicia o download de um vídeo do YouTube a partir da URL fornecida.
+        """
+        url = self.youtube_url_var.get()
+        if not url:
+            messagebox.showwarning("URL Ausente", "Por favor, insira a URL de um vídeo do YouTube.")
+            return
+
+        output_dir = self.output_dir_var.get()
+        if not output_dir or not os.path.isdir(output_dir):
+            messagebox.showwarning("Pasta de Saída Inválida", "Por favor, selecione uma pasta de saída válida.")
+            return
+
+        try:
+            self.log("Iniciando download de: {}".format(url))
+            
+            download_thread = threading.Thread(target=self.run_youtube_download, args=(url, output_dir))
+            download_thread.start()
+
+        except Exception as e:
+            self.log("Erro ao iniciar o download: {}".format(e))
+            messagebox.showerror("Erro de Download", f"Ocorreu um erro ao iniciar o download: {e}")
+
+    def run_youtube_download(self, url, output_dir):
+        try:
+            resolution = self.resolution_var.get()
+            if resolution == "Original" or not resolution:
+                format_selector = 'best'
+            else:
+                format_selector = f'bestvideo[height<={resolution[:-1]}]+bestaudio'
+
+            ffmpeg_location = self.ffmpeg_installer.get_ffmpeg_command()
+
+            ydl_opts = {
+                'format': format_selector,
+                'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
+                'progress_hooks': [self.on_yt_dlp_progress],
+                'ffmpeg_location': ffmpeg_location,
+                'nocheckcertificate': True, # Adicionado para evitar erros de SSL
+            }
+
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            
+            self.show_info_on_main_thread("Download Concluído", "O vídeo foi baixado e adicionado à fila de conversão.")
+
+        except Exception as e:
+            self.log("Erro durante o download: {}".format(e))
+            self.show_error_on_main_thread("Erro de Download", f"Ocorreu um erro durante o download: {e}")
+
+    def on_yt_dlp_progress(self, d):
+        """
+        Hook para monitorar o progresso do download do yt-dlp.
+        """
+        if d['status'] == 'downloading':
+            total_bytes = d.get('total_bytes') or d.get('total_bytes_estimate')
+            if total_bytes:
+                downloaded_bytes = d.get('downloaded_bytes', 0)
+                progress = (downloaded_bytes / total_bytes) * 100
+                
+                def update_download_gui():
+                    # Configurar barra de progresso para modo download (vermelha)
+                    self.progress_bar.configure(style="Download.Horizontal.TProgressbar")
+                    
+                    # Atualizar valor da barra de progresso
+                    self.progress_var.set(progress)
+                    
+                    # Atualizar labels com informações de download
+                    self.status_var.set(f"Baixando vídeo do YouTube...")
+                    self.progress_label_var.set(f"Progresso do Download: {progress:.1f}%")
+                    
+                    # Atualizar status bar
+                    self.update_status_bar(f"Download em progresso: {progress:.1f}%")
+                
+                self.root.after(0, update_download_gui)
+
+        elif d['status'] == 'finished':
+            def finish_download():
+                # Resetar barra de progresso para estilo padrão
+                self.progress_bar.configure(style="Horizontal.TProgressbar")
+                self.progress_var.set(0)
+                self.status_var.set("Download concluído!")
+                self.progress_label_var.set("Progresso Geral: 0.0%")
+                
+            self.root.after(0, finish_download)
+            
+            self.log("Download finalizado!")
+            filename = d.get('filename')
+            if filename and os.path.exists(filename):
+                # Adicionar arquivo à lista de conversão
+                if self.add_file_to_list(filename):
+                    self.log(f"Arquivo adicionado à lista de conversão: {os.path.basename(filename)}")
+                else:
+                    self.log(f"Arquivo já existe na lista: {os.path.basename(filename)}")
+
+    def update_download_progress(self, progress):
+        self.progress_bar["value"] = progress
+
+    def reset_download_progress(self):
+        self.progress_bar["value"] = 0
+
+    def show_info_on_main_thread(self, title, message):
+        self.root.after(0, lambda: messagebox.showinfo(title, message))
+
+    def show_error_on_main_thread(self, title, message):
+        self.root.after(0, lambda: messagebox.showerror(title, message))
+
+    def verify_youtube_url(self):
+        """
+        Verifica a URL do YouTube e busca as resoluções disponíveis.
+        """
+        url = self.youtube_url_var.get()
+        if not url:
+            self.show_error_on_main_thread("URL Inválida", "Por favor, insira uma URL do YouTube.")
+            return
+
+        # Executa a verificação em uma thread para não bloquear a UI
+        thread = threading.Thread(target=self.run_verify_url, args=(url,))
+        thread.start()
+
+    def run_verify_url(self, url):
+        """
+        Executa a extração de informações do yt-dlp e atualiza a UI.
+        """
+        try:
+            self.resolution_combobox.set("Buscando...")
+            self.resolution_combobox.config(state="disabled")
+
+            ydl_opts = {
+                'quiet': True,
+                'listformats': True,
+                'force_generic_extractor': False,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                formats = info.get('formats', [])
+
+            resolutions = sorted(
+                list(set(
+                    f"{f['height']}p" 
+                    for f in formats 
+                    if f.get('height') and f.get('vcodec') != 'none'
+                )),
+                key=lambda r: int(r[:-1]), reverse=True
+            )
+
+            if not resolutions:
+                self.show_error_on_main_thread("Nenhuma Resolução", "Nenhuma resolução de vídeo válida encontrada.")
+                self.resolution_combobox.set("")
+                return
+
+            self.resolution_combobox['values'] = resolutions
+            self.resolution_combobox.config(state="readonly")
+            self.resolution_combobox.set(resolutions[0])
+
+        except Exception as e:
+            self.show_error_on_main_thread("Erro na Verificação", f"Não foi possível obter as resoluções: {e}")
+            self.resolution_combobox.set("")
 
     def create_settings_section(self, parent, row):
         """
@@ -833,6 +1026,45 @@ class MainWindow:
         # Executar na thread principal da GUI
         self.root.after(0, update_gui)
 
+    def add_file_to_list(self, filepath):
+        """
+        Adiciona um arquivo à lista de conversão de forma programática
+        """
+        from utils.validators import validate_input_file
+        
+        # Validar o arquivo antes de adicionar
+        is_valid, error_message = validate_input_file(filepath)
+        if not is_valid:
+            def show_error():
+                self.log_message(f"Erro ao adicionar arquivo: {error_message}")
+            self.root.after(0, show_error)
+            return False
+            
+        # Verificar se o arquivo já está na lista
+        if filepath not in [f["path"] for f in self.selected_files]:
+            file_info = {
+                "path": filepath,
+                "name": os.path.basename(filepath),
+                "status": "Pendente",
+                "progress": "0%",
+                "gpu": "-",
+                "job_id": None,
+            }
+            self.selected_files.append(file_info)
+            
+            # Atualizar interface na thread principal
+            def update_gui():
+                self.update_files_tree()
+                self.log_message(f"Arquivo adicionado à lista: {os.path.basename(filepath)}")
+            
+            self.root.after(0, update_gui)
+            return True
+        else:
+            def show_duplicate():
+                self.log_message(f"Arquivo já existe na lista: {os.path.basename(filepath)}")
+            self.root.after(0, show_duplicate)
+            return False
+
     def browse_input_files(self):
         """
         Abre diálogo para selecionar múltiplos arquivos de entrada
@@ -1412,12 +1644,10 @@ class MainWindow:
                 return
 
         # Configurar callbacks para o queue manager
+        # NOTA: Callbacks globais já estão configurados em _setup_queue_callbacks()
+        # Aqui configuramos apenas callbacks específicos se necessário
         callbacks = {
-            "job_started": self.on_job_started,
-            "job_progress": self.on_job_progress,
-            "job_finished": self.on_job_finished,
-            "queue_finished": self.on_queue_finished,
-            "log": self.log_message,
+            "log": self.log_message,  # Manter log individual para debug
         }
 
         # Adicionar arquivos à fila

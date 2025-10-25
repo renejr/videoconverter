@@ -1,0 +1,9 @@
+{
+  "subject": "Bem-vindo à {{platform_name}}! 🎉",
+  "description": "Email de boas-vindas para novos usuários",
+  "variables": [
+    "name",
+    "platform_name",
+    "support_email"
+  ]
+}

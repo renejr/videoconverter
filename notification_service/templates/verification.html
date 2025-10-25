@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificação de Email - VidConv</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+        .title {
+            color: #1f2937;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .highlight {
+            background-color: #fef3c7;
+            padding: 15px;
+            border-left: 4px solid #f59e0b;
+            margin: 20px 0;
+        }
+        .info-box {
+            background-color: #eff6ff;
+            padding: 15px;
+            border-left: 4px solid #2563eb;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            background-color: #10b981;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .security-note {
+            background-color: #fef2f2;
+            padding: 15px;
+            border-left: 4px solid #ef4444;
+            margin: 20px 0;
+        }
+        .link-text {
+            word-break: break-all;
+            color: #2563eb;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎬 VidConv</div>
+            <h1 class="title">Verificação de Email 📧</h1>
+        </div>
+        
+        <div class="content">
+            <p>Olá <strong>{{user_name}}</strong>,</p>
+            
+            <p>Para garantir a segurança da sua conta e completar seu cadastro no <strong>VidConv</strong>, precisamos verificar seu endereço de email.</p>
+            
+            <div class="highlight">
+                <h3>⚠️ Ação necessária</h3>
+                <p>Clique no botão abaixo para verificar seu email e ativar sua conta:</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{verification_url}}" class="button">
+                    ✅ Verificar Email Agora
+                </a>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280; text-align: center;">
+                Se o botão não funcionar, copie e cole este link no seu navegador:<br>
+                <span class="link-text">{{verification_url}}</span>
+            </p>
+            
+            <div class="info-box">
+                <h3>📋 Informações importantes:</h3>
+                <ul>
+                    <li><strong>Este link expira em {{expiration_hours or "24"}} horas</strong></li>
+                    <li>Após a verificação, você terá acesso completo à plataforma</li>
+                    <li>Poderá começar a converter seus vídeos imediatamente</li>
+                    <li>Se não foi você quem criou esta conta, ignore este email</li>
+                </ul>
+            </div>
+            
+            <div class="security-note">
+                <h3>🔒 Segurança</h3>
+                <p>Por motivos de segurança, nunca compartilhe este link com outras pessoas. Este email foi enviado especificamente para <strong>{{user_email}}</strong>.</p>
+            </div>
+            
+            <h3>❓ Não recebeu o email?</h3>
+            <p>Se você não recebeu este email de verificação:</p>
+            <ul>
+                <li>✉️ Verifique sua pasta de spam/lixo eletrônico</li>
+                <li>📝 Adicione {{sender_email or "noreply@vidconv.com"}} aos seus contatos</li>
+                <li>🔄 Solicite um novo email de verificação em sua conta</li>
+                <li>📞 Entre em contato com nosso suporte se o problema persistir</li>
+            </ul>
+            
+            <div class="info-box">
+                <p><strong>💡 Dica:</strong> Após verificar seu email, você receberá acesso a tutoriais exclusivos sobre como usar o VidConv de forma eficiente!</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Obrigado por escolher o VidConv para suas necessidades de conversão de vídeo!</p>
+            <p>© 2024 VidConv Platform. Todos os direitos reservados.</p>
+            <p>Este é um email automático, por favor não responda.</p>
+        </div>
+    </div>
+</body>
+</html>

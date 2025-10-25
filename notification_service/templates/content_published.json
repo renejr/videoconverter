@@ -1,0 +1,12 @@
+{
+  "subject": "Conteúdo publicado! 🎬 - {{platform_name}}",
+  "description": "Confirmação de publicação de conteúdo",
+  "variables": [
+    "name",
+    "content_title",
+    "content_id",
+    "platform_name",
+    "content_url",
+    "share_url"
+  ]
+}

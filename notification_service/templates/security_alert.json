@@ -1,0 +1,12 @@
+{
+  "subject": "Alerta de Segurança 🚨 - {{platform_name}}",
+  "description": "Alerta de segurança",
+  "variables": [
+    "name",
+    "alert_type",
+    "details",
+    "platform_name",
+    "security_url",
+    "timestamp"
+  ]
+}

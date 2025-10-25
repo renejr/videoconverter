@@ -9,6 +9,9 @@ operações relacionadas à autenticação e autorização.
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import time
+import uuid
+import secrets
+import logging
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -24,6 +27,10 @@ from api.exceptions import (
 )
 from config.settings import settings
 from services.user_service import UserService
+from events.publisher import event_publisher
+
+# Configurar logging
+logger = logging.getLogger(__name__)
 
 # Configuração para hash de senhas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -297,13 +304,21 @@ class AuthService:
         # Atualizar senha
         await self.user_service.update_user_password(db, user.id, new_password)
     
-    async def request_password_reset(self, db: Session, email: str) -> None:
+    async def request_password_reset(
+        self, 
+        db: Session, 
+        email: str, 
+        client_ip: str = None, 
+        user_agent: str = None
+    ) -> None:
         """
         Solicita reset de senha
         
         Args:
             db: Sessão do banco de dados
             email: Email do usuário
+            client_ip: IP do cliente que fez a solicitação
+            user_agent: User agent do cliente
         """
         # Buscar usuário
         user = await self.user_service.get_user_by_email(db, email)
@@ -311,8 +326,34 @@ class AuthService:
             # Não revelar se o email existe ou não
             return
         
-        # TODO: Gerar token de reset e enviar email
-        pass
+        # Gerar token de reset
+        reset_token = secrets.token_urlsafe(32)
+        expires_at = datetime.utcnow() + timedelta(hours=1)  # Token válido por 1 hora
+        
+        # TODO: Salvar token no banco de dados (implementar tabela de tokens)
+        
+        # Construir URL de reset
+        reset_url = f"{settings.frontend_url}/reset-password?token={reset_token}"
+        
+        # Publicar evento PASSWORD_RESET_REQUESTED
+        try:
+            correlation_id = str(uuid.uuid4())
+            await event_publisher.publish_password_reset_requested(
+                user_id=user.id,
+                email=user.email,
+                full_name=user.full_name,
+                reset_token=reset_token,
+                reset_url=reset_url,
+                expires_at=expires_at,
+                ip_address=client_ip,
+                user_agent=user_agent,
+                language_preference=user.language_preference or 'pt-BR',
+                correlation_id=correlation_id
+            )
+            logger.info(f"Evento PASSWORD_RESET_REQUESTED publicado para usuário {user.id} (correlation_id: {correlation_id})")
+        except Exception as e:
+            logger.error(f"Erro ao publicar evento PASSWORD_RESET_REQUESTED para usuário {user.id}: {str(e)}")
+            # Não falhar a solicitação por erro no evento
     
     async def reset_password(self, db: Session, token: str, new_password: str) -> None:
         """
@@ -334,8 +375,42 @@ class AuthService:
             db: Sessão do banco de dados
             email: Email do usuário
         """
-        # TODO: Implementar verificação de email
-        pass
+        # Buscar usuário
+        user = await self.user_service.get_user_by_email(db, email)
+        if not user:
+            # Não revelar se o email existe ou não
+            return
+        
+        # Verificar se o email já está verificado
+        if user.is_verified:
+            return
+        
+        # Gerar token de verificação
+        verification_token = secrets.token_urlsafe(32)
+        expires_at = datetime.utcnow() + timedelta(hours=24)  # Token válido por 24 horas
+        
+        # TODO: Salvar token no banco de dados (implementar tabela de tokens)
+        
+        # Construir URL de verificação
+        verification_url = f"{settings.frontend_url}/verify-email?token={verification_token}"
+        
+        # Publicar evento EMAIL_VERIFICATION_REQUESTED
+        try:
+            correlation_id = str(uuid.uuid4())
+            await event_publisher.publish_email_verification_requested(
+                user_id=user.id,
+                email=user.email,
+                full_name=user.full_name,
+                verification_token=verification_token,
+                verification_url=verification_url,
+                expires_at=expires_at,
+                language_preference=user.language_preference or 'pt-BR',
+                correlation_id=correlation_id
+            )
+            logger.info(f"Evento EMAIL_VERIFICATION_REQUESTED publicado para usuário {user.id} (correlation_id: {correlation_id})")
+        except Exception as e:
+            logger.error(f"Erro ao publicar evento EMAIL_VERIFICATION_REQUESTED para usuário {user.id}: {str(e)}")
+            # Não falhar a solicitação por erro no evento
     
     async def verify_email(self, db: Session, token: str) -> None:
         """

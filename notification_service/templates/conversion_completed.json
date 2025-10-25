@@ -1,0 +1,13 @@
+{
+  "subject": "Conversão Concluída - {{platform_name}}",
+  "description": "Email de notificação de conversão de vídeo concluída",
+  "variables": [
+    "user_name",
+    "original_filename",
+    "output_format",
+    "file_size",
+    "download_url",
+    "conversion_date",
+    "platform_name"
+  ]
+}

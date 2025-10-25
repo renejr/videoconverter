@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Bem-vindo ao {{ platform_name }}!{% endblock %}
+
+{% block header_title %}🎉 Bem-vindo ao {{ platform_name }}!{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #2c3e50; font-size: 28px; margin-bottom: 10px;">
+        Olá, {{ user_name }}! 👋
+    </h1>
+    <p style="color: #7f8c8d; font-size: 18px; margin: 0;">
+        {{ welcome_message }}
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            border-radius: 12px; padding: 30px; margin: 30px 0; color: white; text-align: center;">
+    <h2 style="margin: 0 0 15px 0; font-size: 24px;">
+        🚀 Sua jornada começa agora!
+    </h2>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        Estamos animados para ter você conosco. Prepare-se para uma experiência incrível!
+    </p>
+</div>
+
+<div style="margin: 30px 0;">
+    <h3 style="color: #2c3e50; font-size: 20px; margin-bottom: 20px;">
+        🎯 Próximos passos:
+    </h3>
+    
+    <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 15px;">
+        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <span style="background: #3498db; color: white; border-radius: 50%; 
+                         width: 24px; height: 24px; display: inline-flex; 
+                         align-items: center; justify-content: center; 
+                         font-size: 12px; font-weight: bold; margin-right: 12px;">1</span>
+            <strong style="color: #2c3e50;">Complete seu perfil</strong>
+        </div>
+        <p style="margin: 0; color: #7f8c8d; margin-left: 36px;">
+            Adicione suas informações pessoais e preferências
+        </p>
+    </div>
+    
+    <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 15px;">
+        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <span style="background: #e74c3c; color: white; border-radius: 50%; 
+                         width: 24px; height: 24px; display: inline-flex; 
+                         align-items: center; justify-content: center; 
+                         font-size: 12px; font-weight: bold; margin-right: 12px;">2</span>
+            <strong style="color: #2c3e50;">Explore os recursos</strong>
+        </div>
+        <p style="margin: 0; color: #7f8c8d; margin-left: 36px;">
+            Descubra todas as funcionalidades disponíveis
+        </p>
+    </div>
+    
+    <div style="background: #f8f9fa; border-radius: 8px; padding: 20px;">
+        <div style="display: flex; align-items: center; margin-bottom: 10px;">
+            <span style="background: #27ae60; color: white; border-radius: 50%; 
+                         width: 24px; height: 24px; display: inline-flex; 
+                         align-items: center; justify-content: center; 
+                         font-size: 12px; font-weight: bold; margin-right: 12px;">3</span>
+            <strong style="color: #2c3e50;">Comece a usar</strong>
+        </div>
+        <p style="margin: 0; color: #7f8c8d; margin-left: 36px;">
+            Faça seu primeiro upload e conversão
+        </p>
+    </div>
+</div>
+
+<div style="text-align: center; margin: 40px 0;">
+    <a href="{{ getting_started_url }}" 
+       style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+              color: white; text-decoration: none; padding: 15px 30px; 
+              border-radius: 25px; font-weight: bold; font-size: 16px; 
+              display: inline-block; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+        🚀 Começar agora
+    </a>
+</div>
+
+<div style="background: #e8f5e8; border: 1px solid #d4edda; border-radius: 8px; 
+            padding: 20px; margin: 30px 0;">
+    <h4 style="color: #155724; margin: 0 0 10px 0; font-size: 16px;">
+        💡 Dica importante:
+    </h4>
+    <p style="color: #155724; margin: 0; font-size: 14px;">
+        Mantenha seus dados de login seguros e nunca compartilhe sua senha com terceiros.
+        Se precisar de ajuda, nossa equipe de suporte está sempre disponível!
+    </p>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 15px;">
+        Precisa de ajuda? Estamos aqui para você!
+    </p>
+    <a href="{{ support_url }}" 
+       style="color: #3498db; text-decoration: none; font-weight: bold;">
+        📞 Entrar em contato com o suporte
+    </a>
+</div>
+
+<div style="border-top: 1px solid #ecf0f1; padding-top: 20px; margin-top: 40px; 
+            text-align: center;">
+    <p style="color: #95a5a6; font-size: 12px; margin: 0;">
+        Você está recebendo este email porque se registrou no {{ platform_name }}.
+        <br>
+        <a href="{{ unsubscribe_url }}" style="color: #95a5a6; text-decoration: underline;">
+            Cancelar inscrição
+        </a>
+    </p>
+</div>
+{% endblock %}

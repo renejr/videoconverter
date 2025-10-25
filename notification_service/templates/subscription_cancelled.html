@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #dc3545; font-size: 28px; margin-bottom: 15px;">
+        😔 Assinatura Cancelada
+    </h2>
+    <p style="color: #6c757d; font-size: 18px;">
+        Sentiremos sua falta
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); 
+            border-radius: 12px; padding: 25px; margin: 25px 0; color: white; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+        ✅ Cancelamento Confirmado
+    </h3>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        Processado em {{ cancellation_date }}
+    </p>
+</div>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Olá <strong>{{ customer_name }}</strong>,
+</p>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Confirmamos o cancelamento da sua assinatura do <strong>{{ plan_name }}</strong>. 
+    Lamentamos vê-lo partir, mas respeitamos sua decisão.
+</p>
+
+<div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #721c24; margin-bottom: 15px; font-size: 18px;">
+        📋 Detalhes do Cancelamento
+    </h4>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 1px solid #f5c6cb;">
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24; width: 40%;">Plano Cancelado:</td>
+            <td style="padding: 8px 0; color: #721c24;">{{ plan_name }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f5c6cb;">
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24;">Data do Cancelamento:</td>
+            <td style="padding: 8px 0; color: #721c24;">{{ cancellation_date }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f5c6cb;">
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24;">Acesso até:</td>
+            <td style="padding: 8px 0; color: #721c24;">{{ access_end_date }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24;">Motivo:</td>
+            <td style="padding: 8px 0; color: #721c24;">{{ cancellation_reason or "Não informado" }}</td>
+        </tr>
+    </table>
+</div>
+
+<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #856404; margin-bottom: 15px; font-size: 16px;">
+        ⏰ Acesso Restante
+    </h4>
+    <p style="color: #856404; margin: 0;">
+        Você ainda tem acesso aos recursos premium até <strong>{{ access_end_date }}</strong>. 
+        Após esta data, sua conta será convertida para o plano gratuito.
+    </p>
+</div>
+
+<div class="info-box">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        📦 O que acontece agora?
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 8px;">Não haverá mais cobranças automáticas</li>
+        <li style="margin-bottom: 8px;">Seus dados permanecerão seguros em nossa plataforma</li>
+        <li style="margin-bottom: 8px;">Você pode reativar sua assinatura a qualquer momento</li>
+        <li style="margin-bottom: 8px;">Acesso aos recursos básicos será mantido</li>
+        <li>Você continuará recebendo atualizações importantes</li>
+    </ul>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ reactivate_url }}" class="button" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+                                                       color: white; text-decoration: none; padding: 15px 30px; 
+                                                       border-radius: 8px; display: inline-block; font-weight: 500; margin-right: 15px;">
+        🔄 Reativar Assinatura
+    </a>
+    <a href="{{ feedback_url }}" class="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                                     color: white; text-decoration: none; padding: 15px 30px; 
+                                                     border-radius: 8px; display: inline-block; font-weight: 500;">
+        💬 Deixar Feedback
+    </a>
+</div>
+
+<div style="background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #0056b3; margin-bottom: 15px; font-size: 16px;">
+        💝 Oferta Especial de Retorno
+    </h4>
+    <p style="color: #0056b3; margin-bottom: 10px;">
+        Mudou de ideia? Reative sua assinatura nos próximos 30 dias e ganhe:
+    </p>
+    <ul style="margin: 0; padding-left: 20px; color: #0056b3;">
+        <li style="margin-bottom: 8px;">{{ return_offer_discount or "20% de desconto no primeiro mês" }}</li>
+        <li style="margin-bottom: 8px;">Acesso imediato a todos os recursos premium</li>
+        <li>Suporte prioritário para reconfiguração</li>
+    </ul>
+</div>
+
+<div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 16px;">
+        🤝 Nos Ajude a Melhorar
+    </h4>
+    <p style="color: #6c757d; margin-bottom: 15px;">
+        Seu feedback é muito importante para nós. Nos conte o que podemos melhorar:
+    </p>
+    <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 8px;">
+            <a href="{{ feedback_url }}" style="color: #667eea;">Pesquisa de cancelamento (2 minutos)</a>
+        </li>
+        <li style="margin-bottom: 8px;">
+            Email direto: <a href="mailto:{{ feedback_email }}" style="color: #667eea;">{{ feedback_email }}</a>
+        </li>
+        <li>
+            Avaliação na loja: <a href="{{ review_url }}" style="color: #667eea;">Deixar avaliação</a>
+        </li>
+    </ul>
+</div>
+
+<p style="font-size: 16px; color: #495057; margin: 30px 0; text-align: center; font-style: italic;">
+    "Obrigado por ter sido parte da nossa comunidade. As portas sempre estarão abertas para seu retorno!"
+</p>
+
+<p style="font-size: 14px; color: #6c757d; margin-top: 30px; text-align: center;">
+    Se você cancelou por engano ou tem dúvidas, 
+    <a href="mailto:{{ support_email }}" style="color: #667eea;">entre em contato conosco</a> 
+    dentro de 24 horas.
+</p>
+{% endblock %}

@@ -1,0 +1,11 @@
+{
+  "subject": "Upload concluído! 📹 - {{platform_name}}",
+  "description": "Confirmação de upload de conteúdo",
+  "variables": [
+    "name",
+    "content_title",
+    "content_id",
+    "platform_name",
+    "content_url"
+  ]
+}

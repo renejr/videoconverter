@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversão Concluída - VidConv</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2563eb;
+            margin-bottom: 10px;
+        }
+        .title {
+            color: #1f2937;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .success-badge {
+            background-color: #10b981;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .highlight {
+            background-color: #ecfdf5;
+            padding: 15px;
+            border-left: 4px solid #10b981;
+            margin: 20px 0;
+        }
+        .info-box {
+            background-color: #eff6ff;
+            padding: 15px;
+            border-left: 4px solid #2563eb;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .download-button {
+            background-color: #10b981;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-item {
+            background-color: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2563eb;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .file-info {
+            background-color: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🎬 VidConv</div>
+            <div class="success-badge">✅ CONVERSÃO CONCLUÍDA</div>
+            <h1 class="title">Seu vídeo está pronto! 🎉</h1>
+        </div>
+        
+        <div class="content">
+            <p>Olá <strong>{{user_name}}</strong>,</p>
+            
+            <p>Ótimas notícias! A conversão do seu vídeo foi concluída com sucesso e está pronta para download.</p>
+            
+            <div class="highlight">
+                <h3>📁 Detalhes do arquivo convertido:</h3>
+                <div class="file-info">
+                    <p><strong>Nome original:</strong> {{original_filename}}</p>
+                    <p><strong>Formato de saída:</strong> {{output_format}}</p>
+                    <p><strong>Qualidade:</strong> {{quality_setting}}</p>
+                    <p><strong>Tamanho final:</strong> {{file_size}}</p>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value">{{processing_time}}</div>
+                    <div class="stat-label">Tempo de processamento</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{compression_ratio}}%</div>
+                    <div class="stat-label">Taxa de compressão</div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{download_url}}" class="button download-button">
+                    📥 Baixar Vídeo Convertido
+                </a>
+                <a href="{{platform_url}}" class="button">
+                    🎬 Converter Outro Vídeo
+                </a>
+            </div>
+            
+            <div class="info-box">
+                <h3>⏰ Informações importantes:</h3>
+                <ul>
+                    <li><strong>Link de download válido por {{download_expiry or "7"}} dias</strong></li>
+                    <li>Após este período, o arquivo será removido automaticamente</li>
+                    <li>Faça o download o quanto antes para não perder o arquivo</li>
+                    <li>O arquivo está disponível em alta qualidade</li>
+                </ul>
+            </div>
+            
+            <h3>🚀 Próximos passos:</h3>
+            <ul>
+                <li>✅ Baixe seu vídeo convertido usando o link acima</li>
+                <li>📱 Compartilhe nas suas redes sociais favoritas</li>
+                <li>🎯 Experimente outros formatos e configurações</li>
+                <li>⭐ Avalie nossa plataforma se gostou do resultado</li>
+            </ul>
+            
+            <div class="highlight">
+                <p><strong>💡 Dica:</strong> Salve este email para ter acesso rápido ao link de download. Você também pode acessar seus arquivos convertidos na sua conta do VidConv.</p>
+            </div>
+            
+            <h3>❓ Precisa de ajuda?</h3>
+            <p>Se você tiver alguma dúvida ou problema:</p>
+            <ul>
+                <li>📧 Entre em contato: {{support_email or "suporte@vidconv.com"}}</li>
+                <li>💬 Chat online disponível 24/7</li>
+                <li>📚 Acesse nossa central de ajuda</li>
+                <li>🎥 Assista nossos tutoriais em vídeo</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>Obrigado por usar o VidConv! Esperamos que você esteja satisfeito com o resultado.</p>
+            <p>© 2024 VidConv Platform. Todos os direitos reservados.</p>
+            <p>Este é um email automático, por favor não responda.</p>
+        </div>
+    </div>
+</body>
+</html>
