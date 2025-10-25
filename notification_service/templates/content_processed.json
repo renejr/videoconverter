@@ -1,0 +1,11 @@
+{
+  "subject": "Vídeo processado! ✅ - {{platform_name}}",
+  "description": "Notificação de processamento concluído",
+  "variables": [
+    "name",
+    "content_title",
+    "content_id",
+    "platform_name",
+    "content_url"
+  ]
+}

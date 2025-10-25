@@ -26,7 +26,7 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
 
 from core.ffmpeg_installer import FFmpegInstaller
-from core.video_converter import VideoConverterManager
+from core.queue_manager import ConversionQueueManager
 from core.queue_manager import ConversionQueueManager
 from utils.config import (
     SUPPORTED_OUTPUT_FORMATS,
@@ -50,7 +50,7 @@ class VideoConverterWindow(QMainWindow):
         self.setMinimumSize(*WINDOW_MIN_SIZE)
         self.resize(*WINDOW_DEFAULT_SIZE)
         self.setStyleSheet(MAIN_WINDOW_STYLE)
-        self.video_converter = VideoConverterManager()
+        self.video_converter = ConversionQueueManager()
         self.queue_manager = ConversionQueueManager()
         self.conversion_thread = None
         self.init_ui()

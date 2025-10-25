@@ -1,0 +1,11 @@
+{
+  "subject": "Assinatura cancelada - {{platform_name}}",
+  "description": "Confirmação de cancelamento de assinatura",
+  "variables": [
+    "name",
+    "plan_name",
+    "end_date",
+    "platform_name",
+    "reactivate_url"
+  ]
+}

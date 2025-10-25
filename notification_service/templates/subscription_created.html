@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #28a745; font-size: 28px; margin-bottom: 15px;">
+        🎉 Assinatura Ativada!
+    </h2>
+    <p style="color: #6c757d; font-size: 18px;">
+        Bem-vindo ao {{ plan_name }}
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+            border-radius: 12px; padding: 25px; margin: 25px 0; color: white; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+        ✅ Assinatura Confirmada
+    </h3>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        Ativa desde {{ start_date }}
+    </p>
+</div>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Olá <strong>{{ customer_name }}</strong>,
+</p>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Parabéns! Sua assinatura do <strong>{{ plan_name }}</strong> foi ativada com sucesso. 
+    Agora você tem acesso completo a todos os recursos premium do {{ platform_name }}.
+</p>
+
+<div style="background: #ffffff; border: 2px solid #28a745; border-radius: 12px; padding: 25px; margin: 25px 0;">
+    <h4 style="color: #28a745; margin-bottom: 20px; font-size: 20px; text-align: center;">
+        📋 Detalhes da Sua Assinatura
+    </h4>
+    
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <tr style="border-bottom: 1px solid #f8f9fa;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057; width: 40%;">
+                Plano:
+            </td>
+            <td style="padding: 12px 0; color: #28a745; font-weight: 600; font-size: 16px;">
+                {{ plan_name }}
+            </td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f8f9fa;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057;">
+                Valor:
+            </td>
+            <td style="padding: 12px 0; color: #495057; font-size: 16px;">
+                {{ plan_price }} / {{ billing_cycle }}
+            </td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f8f9fa;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057;">
+                Data de Início:
+            </td>
+            <td style="padding: 12px 0; color: #495057;">
+                {{ start_date }}
+            </td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f8f9fa;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057;">
+                Próxima Cobrança:
+            </td>
+            <td style="padding: 12px 0; color: #495057;">
+                {{ next_billing_date }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 12px 0; font-weight: 500; color: #495057;">
+                Status:
+            </td>
+            <td style="padding: 12px 0; color: #28a745; font-weight: 500;">
+                🟢 Ativa
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #155724; margin-bottom: 15px; font-size: 18px;">
+        🚀 O que você pode fazer agora:
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #155724;">
+        {% for feature in plan_features %}
+        <li style="margin-bottom: 8px;">{{ feature }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ dashboard_url }}" class="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                                      color: white; text-decoration: none; padding: 15px 30px; 
+                                                      border-radius: 8px; display: inline-block; font-weight: 500; margin-right: 15px;">
+        🎯 Acessar Dashboard
+    </a>
+    <a href="{{ billing_url }}" class="button" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+                                                     color: white; text-decoration: none; padding: 15px 30px; 
+                                                     border-radius: 8px; display: inline-block; font-weight: 500;">
+        💳 Gerenciar Cobrança
+    </a>
+</div>
+
+<div class="info-box">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        💡 Primeiros Passos Recomendados
+    </h4>
+    <ol style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 10px;">
+            <strong>Configure seu perfil:</strong> Adicione suas informações e preferências
+        </li>
+        <li style="margin-bottom: 10px;">
+            <strong>Explore os recursos:</strong> Familiarize-se com as funcionalidades premium
+        </li>
+        <li style="margin-bottom: 10px;">
+            <strong>Configure notificações:</strong> Personalize como deseja receber atualizações
+        </li>
+        <li style="margin-bottom: 10px;">
+            <strong>Convide sua equipe:</strong> Adicione colaboradores se aplicável
+        </li>
+        <li>
+            <strong>Acesse o suporte:</strong> Conheça nossos canais de atendimento
+        </li>
+    </ol>
+</div>
+
+<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #856404; margin-bottom: 15px; font-size: 16px;">
+        🔄 Renovação Automática
+    </h4>
+    <p style="color: #856404; margin-bottom: 10px;">
+        Sua assinatura será renovada automaticamente em <strong>{{ next_billing_date }}</strong> 
+        usando o método de pagamento {{ payment_method }}.
+    </p>
+    <p style="color: #856404; margin: 0; font-size: 14px;">
+        Você pode cancelar ou modificar sua assinatura a qualquer momento em suas configurações de conta.
+    </p>
+</div>
+
+<div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 16px;">
+        📞 Suporte Premium
+    </h4>
+    <p style="color: #6c757d; margin-bottom: 15px;">
+        Como assinante {{ plan_name }}, você tem acesso ao nosso suporte prioritário:
+    </p>
+    <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 8px;">
+            Email prioritário: <a href="mailto:{{ premium_support_email }}" style="color: #667eea;">{{ premium_support_email }}</a>
+        </li>
+        <li style="margin-bottom: 8px;">
+            Chat ao vivo: <a href="{{ support_chat_url }}" style="color: #667eea;">Disponível 24/7</a>
+        </li>
+        <li style="margin-bottom: 8px;">
+            Base de conhecimento: <a href="{{ help_center_url }}" style="color: #667eea;">Centro de Ajuda</a>
+        </li>
+        <li>Tempo de resposta: Até 2 horas em dias úteis</li>
+    </ul>
+</div>
+
+<div style="background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #0056b3; margin-bottom: 15px; font-size: 16px;">
+        🎁 Oferta Especial para Novos Assinantes
+    </h4>
+    <p style="color: #0056b3; margin-bottom: 10px;">
+        {% if welcome_bonus %}
+        Como novo assinante, você ganhou: <strong>{{ welcome_bonus }}</strong>
+        {% else %}
+        Fique atento às nossas ofertas exclusivas para assinantes!
+        {% endif %}
+    </p>
+    <p style="color: #0056b3; margin: 0; font-size: 14px;">
+        Acompanhe nossos emails para não perder promoções e novidades exclusivas.
+    </p>
+</div>
+
+<p style="font-size: 14px; color: #6c757d; margin-top: 30px; text-align: center;">
+    Obrigado por escolher o {{ platform_name }}! Estamos animados para ter você conosco. 
+    Se tiver alguma dúvida, não hesite em nos contatar.
+</p>
+{% endblock %}

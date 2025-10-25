@@ -1,0 +1,11 @@
+{
+  "subject": "Assinatura renovada 🔄 - {{platform_name}}",
+  "description": "Confirmação de renovação de assinatura",
+  "variables": [
+    "name",
+    "plan_name",
+    "next_billing_date",
+    "platform_name",
+    "manage_url"
+  ]
+}

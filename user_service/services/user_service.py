@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc
 from passlib.context import CryptContext
 import secrets
+import uuid
+import logging
 
 from models.user import User
 from models.credential import Credential
@@ -29,6 +31,10 @@ from api.exceptions import (
 )
 from utils.validators import validate_cpf, validate_cnpj, validate_email, validate_phone
 from utils.formatters import format_cpf, format_cnpj, format_phone
+from events.publisher import event_publisher
+
+# Configurar logging
+logger = logging.getLogger(__name__)
 
 # Configuração para hash de senhas
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -127,6 +133,22 @@ class UserService:
         db.add(new_credential)
         db.commit()
         db.refresh(new_user)
+        
+        # Publicar evento USER_REGISTERED
+        try:
+            correlation_id = str(uuid.uuid4())
+            await event_publisher.publish_user_registered(
+                user_id=new_user.id,
+                email=new_user.email,
+                full_name=new_user.full_name,
+                language_preference=new_user.language_preference or 'pt-BR',
+                timezone=new_user.timezone or 'America/Sao_Paulo',
+                correlation_id=correlation_id
+            )
+            logger.info(f"Evento USER_REGISTERED publicado para usuário {new_user.id} (correlation_id: {correlation_id})")
+        except Exception as e:
+            logger.error(f"Erro ao publicar evento USER_REGISTERED para usuário {new_user.id}: {str(e)}")
+            # Não falhar a criação do usuário por erro no evento
         
         return new_user
     
@@ -228,12 +250,37 @@ class UserService:
         update_data["updated_at"] = datetime.utcnow()
         update_data["updated_by_id"] = updated_by_id
         
+        # Capturar campos alterados para o evento
+        updated_fields = {}
+        for field, value in update_data.items():
+            if field not in ['updated_at', 'updated_by_id']:
+                old_value = getattr(user, field, None)
+                if old_value != value:
+                    updated_fields[field] = value
+        
         # Aplicar atualizações
         for field, value in update_data.items():
             setattr(user, field, value)
         
         db.commit()
         db.refresh(user)
+        
+        # Publicar evento USER_PROFILE_UPDATED se houve mudanças
+        if updated_fields:
+            try:
+                correlation_id = str(uuid.uuid4())
+                await event_publisher.publish_user_profile_updated(
+                    user_id=user.id,
+                    email=user.email,
+                    full_name=user.full_name,
+                    updated_fields=updated_fields,
+                    language_preference=user.language_preference or 'pt-BR',
+                    correlation_id=correlation_id
+                )
+                logger.info(f"Evento USER_PROFILE_UPDATED publicado para usuário {user.id} (correlation_id: {correlation_id})")
+            except Exception as e:
+                logger.error(f"Erro ao publicar evento USER_PROFILE_UPDATED para usuário {user.id}: {str(e)}")
+                # Não falhar a atualização por erro no evento
         
         return user
     

@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #dc3545; font-size: 28px; margin-bottom: 15px;">
+        ❌ Falha no Pagamento
+    </h2>
+    <p style="color: #6c757d; font-size: 18px;">
+        Não foi possível processar seu pagamento
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); 
+            border-radius: 12px; padding: 25px; margin: 25px 0; color: white; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+        ⚠️ Pagamento Não Processado
+    </h3>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        Tentativa realizada em {{ attempt_date }}
+    </p>
+</div>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Olá <strong>{{ customer_name }}</strong>,
+</p>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Infelizmente, não conseguimos processar seu pagamento para {{ service_name }}. 
+    Não se preocupe, você pode tentar novamente a qualquer momento.
+</p>
+
+<div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #721c24; margin-bottom: 15px; font-size: 18px;">
+        📋 Detalhes da Tentativa
+    </h4>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 1px solid #f5c6cb;">
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24; width: 40%;">
+                Valor:
+            </td>
+            <td style="padding: 8px 0; color: #721c24;">
+                {{ amount }}
+            </td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f5c6cb;">
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24;">
+                Método de Pagamento:
+            </td>
+            <td style="padding: 8px 0; color: #721c24;">
+                {{ payment_method }}
+            </td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f5c6cb;">
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24;">
+                Motivo da Falha:
+            </td>
+            <td style="padding: 8px 0; color: #721c24;">
+                {{ failure_reason }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24;">
+                Código de Referência:
+            </td>
+            <td style="padding: 8px 0; color: #721c24;">
+                {{ reference_code }}
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ retry_payment_url }}" class="button" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+                                                          color: white; text-decoration: none; padding: 15px 30px; 
+                                                          border-radius: 8px; display: inline-block; font-weight: 500; margin-right: 15px;">
+        🔄 Tentar Novamente
+    </a>
+    <a href="{{ update_payment_url }}" class="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                                            color: white; text-decoration: none; padding: 15px 30px; 
+                                                            border-radius: 8px; display: inline-block; font-weight: 500;">
+        💳 Atualizar Método de Pagamento
+    </a>
+</div>
+
+<div class="info-box">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        🔍 Possíveis Causas e Soluções
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 12px;">
+            <strong>Saldo insuficiente:</strong> Verifique se há fundos suficientes em sua conta
+        </li>
+        <li style="margin-bottom: 12px;">
+            <strong>Cartão expirado:</strong> Confirme se seu cartão está dentro da validade
+        </li>
+        <li style="margin-bottom: 12px;">
+            <strong>Dados incorretos:</strong> Verifique se as informações do cartão estão corretas
+        </li>
+        <li style="margin-bottom: 12px;">
+            <strong>Limite excedido:</strong> Confirme se não ultrapassou o limite do cartão
+        </li>
+        <li style="margin-bottom: 12px;">
+            <strong>Bloqueio bancário:</strong> Entre em contato com seu banco para verificar bloqueios
+        </li>
+        <li>
+            <strong>Problemas técnicos:</strong> Tente novamente em alguns minutos
+        </li>
+    </ul>
+</div>
+
+<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #856404; margin-bottom: 15px; font-size: 16px;">
+        ⏰ Status da Sua Assinatura
+    </h4>
+    <p style="color: #856404; margin-bottom: 10px;">
+        {% if grace_period_end %}
+        Sua assinatura permanece ativa até <strong>{{ grace_period_end }}</strong>. 
+        Após esta data, o acesso será suspenso até que o pagamento seja processado.
+        {% else %}
+        Seu acesso aos serviços pode ser limitado até que o pagamento seja processado com sucesso.
+        {% endif %}
+    </p>
+    <p style="color: #856404; margin: 0; font-size: 14px;">
+        Recomendamos resolver esta questão o quanto antes para evitar interrupções no serviço.
+    </p>
+</div>
+
+<div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #0c5460; margin-bottom: 15px; font-size: 16px;">
+        💡 Métodos de Pagamento Alternativos
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #0c5460;">
+        <li style="margin-bottom: 8px;">Cartão de crédito ou débito diferente</li>
+        <li style="margin-bottom: 8px;">PayPal ou carteira digital</li>
+        <li style="margin-bottom: 8px;">Transferência bancária</li>
+        <li style="margin-bottom: 8px;">PIX (pagamento instantâneo)</li>
+        <li>Boleto bancário</li>
+    </ul>
+</div>
+
+<div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 16px;">
+        📞 Precisa de Ajuda?
+    </h4>
+    <p style="color: #6c757d; margin-bottom: 15px;">
+        Nossa equipe de suporte está pronta para ajudar você a resolver este problema:
+    </p>
+    <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 8px;">
+            Email: <a href="mailto:{{ support_email }}" style="color: #667eea;">{{ support_email }}</a>
+        </li>
+        <li style="margin-bottom: 8px;">
+            Chat online: <a href="{{ support_chat_url }}" style="color: #667eea;">Iniciar conversa</a>
+        </li>
+        <li>Telefone: {{ support_phone or "Disponível em nossa página de contato" }}</li>
+    </ul>
+</div>
+
+<p style="font-size: 14px; color: #6c757d; margin-top: 30px; text-align: center;">
+    Este email foi enviado automaticamente pelo nosso sistema de pagamentos. 
+    Agradecemos sua compreensão e estamos aqui para ajudar a resolver esta questão rapidamente.
+</p>
+{% endblock %}

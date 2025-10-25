@@ -1,0 +1,10 @@
+{
+  "subject": "Assinatura expirada - {{platform_name}} ⏰",
+  "description": "Notificação de expiração de assinatura",
+  "variables": [
+    "name",
+    "plan_name",
+    "platform_name",
+    "renew_url"
+  ]
+}

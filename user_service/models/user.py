@@ -63,8 +63,65 @@ class User(Base):
     
     date_of_birth = Column(
         Date, 
+        nullable=False,
+        comment="Data de nascimento (obrigatório - validação 18+)"
+    )
+    
+    # Campos específicos brasileiros
+    cpf = Column(
+        String(11), 
+        nullable=False, 
+        unique=True,
+        comment="CPF do usuário (apenas números, validado)"
+    )
+    
+    gender = Column(
+        String(20), 
+        nullable=False,
+        comment="Gênero: Masculino, Feminino, Não-binário, Prefiro não informar"
+    )
+    
+    # Endereço (integração ViaCEP)
+    cep = Column(
+        String(8), 
+        nullable=False,
+        comment="CEP (apenas números)"
+    )
+    
+    address_street = Column(
+        String(255), 
+        nullable=False,
+        comment="Logradouro (preenchido via ViaCEP)"
+    )
+    
+    address_number = Column(
+        String(10), 
+        nullable=False,
+        comment="Número da residência"
+    )
+    
+    address_complement = Column(
+        String(100), 
         nullable=True,
-        comment="Data de nascimento (opcional)"
+        comment="Complemento do endereço (opcional)"
+    )
+    
+    address_neighborhood = Column(
+        String(100), 
+        nullable=False,
+        comment="Bairro (preenchido via ViaCEP)"
+    )
+    
+    address_city = Column(
+        String(100), 
+        nullable=False,
+        comment="Cidade (preenchido via ViaCEP)"
+    )
+    
+    address_state = Column(
+        String(2), 
+        nullable=False,
+        comment="Estado - sigla (preenchido via ViaCEP)"
     )
     
     # Configurações regionais
@@ -158,12 +215,16 @@ class User(Base):
         cascade="all, delete-orphan"
     )
     
-    # Índices para otimização de consultas
+    # Índices e configurações da tabela
     __table_args__ = (
         Index('idx_email', 'email'),
+        Index('idx_cpf', 'cpf'),
         Index('idx_active_verified', 'is_active', 'is_verified'),
         Index('idx_created_at', 'created_at'),
         Index('idx_last_login', 'last_login_at'),
+        Index('idx_cep', 'cep'),
+        Index('idx_gender', 'gender'),
+        Index('idx_birth_date', 'date_of_birth'),
         {
             'mysql_engine': 'InnoDB',
             'mysql_charset': 'utf8mb4',

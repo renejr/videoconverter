@@ -1,0 +1,13 @@
+{
+  "subject": "Recibo de pagamento - {{platform_name}} 💳",
+  "description": "Recibo de pagamento",
+  "variables": [
+    "name",
+    "amount",
+    "currency",
+    "plan_name",
+    "payment_id",
+    "platform_name",
+    "payment_date"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "email": "novo.teste.2024@example.com",
+  "password": "MinhaSenh@123",
+  "confirm_password": "MinhaSenh@123",
+  "first_name": "Novo",
+  "last_name": "Teste",
+  "accept_terms": true,
+  "accept_privacy": true,
+  "marketing_consent": false
+}

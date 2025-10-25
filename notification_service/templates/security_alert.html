@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #dc3545; font-size: 28px; margin-bottom: 15px;">
+        🚨 Alerta de Segurança
+    </h2>
+    <p style="color: #6c757d; font-size: 18px;">
+        Atividade suspeita detectada
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); 
+            border-radius: 12px; padding: 25px; margin: 25px 0; color: white; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+        ⚠️ Ação Necessária
+    </h3>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        Detectado em {{ detection_time }}
+    </p>
+</div>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Olá <strong>{{ user_name }}</strong>,
+</p>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Detectamos atividade suspeita em sua conta do {{ platform_name }}. 
+    Por favor, revise as informações abaixo e tome as ações necessárias.
+</p>
+
+<div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #721c24; margin-bottom: 15px; font-size: 18px;">
+        🔍 Detalhes da Atividade Suspeita
+    </h4>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 1px solid #f5c6cb;">
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24; width: 30%;">Tipo:</td>
+            <td style="padding: 8px 0; color: #721c24;">{{ alert_type }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f5c6cb;">
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24;">Data/Hora:</td>
+            <td style="padding: 8px 0; color: #721c24;">{{ detection_time }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f5c6cb;">
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24;">IP:</td>
+            <td style="padding: 8px 0; color: #721c24;">{{ ip_address }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #f5c6cb;">
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24;">Localização:</td>
+            <td style="padding: 8px 0; color: #721c24;">{{ location }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; font-weight: 500; color: #721c24;">Dispositivo:</td>
+            <td style="padding: 8px 0; color: #721c24;">{{ device_info }}</td>
+        </tr>
+    </table>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ security_review_url }}" class="button" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); 
+                                                              color: white; text-decoration: none; padding: 15px 30px; 
+                                                              border-radius: 8px; display: inline-block; font-weight: 500; margin-right: 15px;">
+        🔒 Revisar Segurança
+    </a>
+    <a href="{{ change_password_url }}" class="button" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); 
+                                                             color: white; text-decoration: none; padding: 15px 30px; 
+                                                             border-radius: 8px; display: inline-block; font-weight: 500;">
+        🔑 Alterar Senha
+    </a>
+</div>
+
+<div class="info-box">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 18px;">
+        🛡️ Ações Recomendadas
+    </h4>
+    <ol style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 8px;">Altere sua senha imediatamente</li>
+        <li style="margin-bottom: 8px;">Ative a autenticação de dois fatores</li>
+        <li style="margin-bottom: 8px;">Revise sessões ativas e encerre as suspeitas</li>
+        <li style="margin-bottom: 8px;">Verifique atividades recentes na conta</li>
+        <li>Entre em contato conosco se não reconhecer a atividade</li>
+    </ol>
+</div>
+
+<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #856404; margin-bottom: 15px; font-size: 16px;">
+        ❓ Foi você?
+    </h4>
+    <p style="color: #856404; margin-bottom: 10px;">
+        Se você reconhece esta atividade, pode ignorar este alerta. 
+        Caso contrário, <strong>tome ação imediatamente</strong>.
+    </p>
+    <p style="color: #856404; margin: 0; font-size: 14px;">
+        Lembre-se: nunca compartilhe suas credenciais e sempre use dispositivos seguros.
+    </p>
+</div>
+
+<p style="font-size: 14px; color: #6c757d; margin-top: 30px; text-align: center;">
+    Este alerta foi gerado automaticamente pelo nosso sistema de segurança. 
+    Se tiver dúvidas, <a href="mailto:{{ security_email }}" style="color: #dc3545;">contate nossa equipe de segurança</a>.
+</p>
+{% endblock %}

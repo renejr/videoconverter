@@ -1,0 +1,11 @@
+{
+  "subject": "Assinatura ativada! 🚀 - {{platform_name}}",
+  "description": "Confirmação de criação de assinatura",
+  "variables": [
+    "name",
+    "plan_name",
+    "subscription_id",
+    "platform_name",
+    "manage_url"
+  ]
+}

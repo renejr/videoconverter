@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #28a745; font-size: 28px; margin-bottom: 15px;">
+        💳 Recibo de Pagamento
+    </h2>
+    <p style="color: #6c757d; font-size: 18px;">
+        Pagamento processado com sucesso
+    </p>
+</div>
+
+<div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+            border-radius: 12px; padding: 25px; margin: 25px 0; color: white; text-align: center;">
+    <h3 style="margin: 0 0 10px 0; font-size: 20px;">
+        ✅ Pagamento Confirmado
+    </h3>
+    <p style="margin: 0; font-size: 16px; opacity: 0.9;">
+        Transação processada em {{ payment_date }}
+    </p>
+</div>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Olá <strong>{{ customer_name }}</strong>,
+</p>
+
+<p style="font-size: 16px; margin-bottom: 20px;">
+    Obrigado pelo seu pagamento! Seu recibo está detalhado abaixo para seus registros.
+</p>
+
+<div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 25px; margin: 25px 0;">
+    <h4 style="color: #495057; margin-bottom: 20px; font-size: 18px; text-align: center;">
+        📄 Detalhes da Transação
+    </h4>
+    
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <tr style="border-bottom: 1px solid #dee2e6;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057; width: 40%;">
+                Número da Transação:
+            </td>
+            <td style="padding: 12px 0; color: #6c757d;">
+                {{ transaction_id }}
+            </td>
+        </tr>
+        <tr style="border-bottom: 1px solid #dee2e6;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057;">
+                Data do Pagamento:
+            </td>
+            <td style="padding: 12px 0; color: #6c757d;">
+                {{ payment_date }}
+            </td>
+        </tr>
+        <tr style="border-bottom: 1px solid #dee2e6;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057;">
+                Método de Pagamento:
+            </td>
+            <td style="padding: 12px 0; color: #6c757d;">
+                {{ payment_method }}
+            </td>
+        </tr>
+        <tr style="border-bottom: 1px solid #dee2e6;">
+            <td style="padding: 12px 0; font-weight: 500; color: #495057;">
+                Status:
+            </td>
+            <td style="padding: 12px 0; color: #28a745; font-weight: 500;">
+                ✅ Aprovado
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div style="background: #ffffff; border: 2px solid #dee2e6; border-radius: 8px; padding: 25px; margin: 25px 0;">
+    <h4 style="color: #495057; margin-bottom: 20px; font-size: 18px; text-align: center;">
+        🛒 Itens Pagos
+    </h4>
+    
+    {% for item in items %}
+    <div style="display: flex; justify-content: space-between; align-items: center; 
+                padding: 15px 0; border-bottom: 1px solid #f8f9fa;">
+        <div>
+            <h5 style="margin: 0 0 5px 0; color: #495057; font-size: 16px;">
+                {{ item.name }}
+            </h5>
+            <p style="margin: 0; color: #6c757d; font-size: 14px;">
+                {{ item.description }}
+            </p>
+            {% if item.period %}
+            <p style="margin: 5px 0 0 0; color: #6c757d; font-size: 12px;">
+                Período: {{ item.period }}
+            </p>
+            {% endif %}
+        </div>
+        <div style="text-align: right;">
+            <p style="margin: 0; color: #495057; font-size: 16px; font-weight: 500;">
+                {{ item.amount }}
+            </p>
+            {% if item.quantity > 1 %}
+            <p style="margin: 0; color: #6c757d; font-size: 12px;">
+                {{ item.quantity }}x {{ item.unit_price }}
+            </p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    
+    <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #dee2e6;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="color: #6c757d; font-size: 16px;">Subtotal:</span>
+            <span style="color: #495057; font-size: 16px;">{{ subtotal }}</span>
+        </div>
+        
+        {% if discount_amount %}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="color: #28a745; font-size: 16px;">Desconto:</span>
+            <span style="color: #28a745; font-size: 16px;">-{{ discount_amount }}</span>
+        </div>
+        {% endif %}
+        
+        {% if tax_amount %}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <span style="color: #6c757d; font-size: 16px;">Impostos:</span>
+            <span style="color: #495057; font-size: 16px;">{{ tax_amount }}</span>
+        </div>
+        {% endif %}
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; 
+                    padding: 15px 0; border-top: 2px solid #495057; margin-top: 15px;">
+            <span style="color: #495057; font-size: 20px; font-weight: bold;">Total:</span>
+            <span style="color: #28a745; font-size: 24px; font-weight: bold;">{{ total_amount }}</span>
+        </div>
+    </div>
+</div>
+
+<div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+    <h4 style="color: #155724; margin-bottom: 15px; font-size: 16px;">
+        📋 Informações de Cobrança
+    </h4>
+    <p style="color: #155724; margin-bottom: 10px;">
+        <strong>Nome:</strong> {{ billing_name }}<br>
+        <strong>Email:</strong> {{ billing_email }}<br>
+        {% if billing_address %}
+        <strong>Endereço:</strong> {{ billing_address }}
+        {% endif %}
+    </p>
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ invoice_url }}" class="button" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                                     color: white; text-decoration: none; padding: 15px 30px; 
+                                                     border-radius: 8px; display: inline-block; font-weight: 500; margin-right: 15px;">
+        📄 Baixar Nota Fiscal
+    </a>
+    <a href="{{ account_url }}" class="button" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+                                                     color: white; text-decoration: none; padding: 15px 30px; 
+                                                     border-radius: 8px; display: inline-block; font-weight: 500;">
+        👤 Acessar Minha Conta
+    </a>
+</div>
+
+<div class="info-box">
+    <h4 style="color: #495057; margin-bottom: 15px; font-size: 16px;">
+        💡 Informações Importantes
+    </h4>
+    <ul style="margin: 0; padding-left: 20px; color: #6c757d;">
+        <li style="margin-bottom: 8px;">Guarde este recibo para seus registros</li>
+        <li style="margin-bottom: 8px;">O acesso aos serviços foi ativado automaticamente</li>
+        <li style="margin-bottom: 8px;">Você receberá lembretes antes da próxima cobrança</li>
+        <li>Em caso de dúvidas, entre em contato conosco</li>
+    </ul>
+</div>
+
+<p style="font-size: 14px; color: #6c757d; margin-top: 30px; text-align: center;">
+    Obrigado por escolher o {{ platform_name }}! 
+    Se você tiver alguma dúvida sobre este pagamento, 
+    <a href="mailto:{{ support_email }}" style="color: #667eea;">entre em contato conosco</a>.
+</p>
+{% endblock %}

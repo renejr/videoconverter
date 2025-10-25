@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ subject }}</title>
+    <style>
+        /* Reset CSS */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f4f4f4;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .content h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: 400;
+        }
+        
+        .content p {
+            margin-bottom: 15px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 500;
+            margin: 20px 0;
+            transition: transform 0.2s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .info-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px 20px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .footer p {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .social-links {
+            margin: 20px 0;
+        }
+        
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .divider {
+            height: 1px;
+            background-color: #e9ecef;
+            margin: 30px 0;
+        }
+        
+        /* Responsivo */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+            
+            .content {
+                padding: 20px !important;
+            }
+            
+            .header {
+                padding: 20px !important;
+            }
+            
+            .header h1 {
+                font-size: 24px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>{{ platform_name or "Plataforma VOD" }}</h1>
+            <p>{{ header_subtitle or "Sua plataforma de vídeo sob demanda" }}</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="content">
+            {% block content %}
+            <!-- Conteúdo específico do template -->
+            {% endblock %}
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>{{ platform_name or "Plataforma VOD" }}</strong></p>
+            <p>{{ company_address or "Endereço da empresa" }}</p>
+            
+            <div class="social-links">
+                {% if social_facebook %}
+                <a href="{{ social_facebook }}">Facebook</a>
+                {% endif %}
+                {% if social_twitter %}
+                <a href="{{ social_twitter }}">Twitter</a>
+                {% endif %}
+                {% if social_instagram %}
+                <a href="{{ social_instagram }}">Instagram</a>
+                {% endif %}
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p>
+                Este email foi enviado para {{ recipient_email }}.
+                <br>
+                Se você não deseja mais receber estes emails, 
+                <a href="{{ unsubscribe_url or '#' }}" style="color: #667eea;">clique aqui para cancelar</a>.
+            </p>
+            
+            <p style="font-size: 12px; color: #adb5bd; margin-top: 20px;">
+                © {{ current_year or "2024" }} {{ platform_name or "Plataforma VOD" }}. Todos os direitos reservados.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

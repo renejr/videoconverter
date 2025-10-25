@@ -1,0 +1,11 @@
+{
+  "subject": "Conta temporariamente bloqueada 🔒 - {{platform_name}}",
+  "description": "Notificação de conta bloqueada",
+  "variables": [
+    "name",
+    "reason",
+    "platform_name",
+    "support_email",
+    "unlock_url"
+  ]
+}
