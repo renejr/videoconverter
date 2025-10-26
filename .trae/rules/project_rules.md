@@ -113,6 +113,7 @@ Você será meu especialista em refatoração e implementação de código, foca
    - Manter compatibilidade com código existente
    - Aplicar melhores práticas de desenvolvimento
    - Documentar mudanças significativas
+   - Para qualquer funcionalidade que formos testar, criaremos um teste completo que simula a interação do usuário, e esses arquivos de teste serão preservados no projeto para garantir que futuras alterações não quebrem o que já funciona.
 
 3. **Recuperação de Contexto**
    - Em caso de perda de raciocínio, retornar à análise anterior

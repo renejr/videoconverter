@@ -12,6 +12,7 @@ import json
 import time
 import random
 import re
+import platform
 try:
     import webview
     WEBVIEW_AVAILABLE = True
@@ -47,399 +48,7 @@ from utils.updater import UpdateChecker
 from gui.update_widget import UpdateWidget
 
 
-class YouTubeBrowserExtractor:
-    """
-    Extrator de dados do YouTube usando PyWebView para contornar detecção de bot
-    """
-    
-    def __init__(self, log_callback=None):
-        self.log_callback = log_callback or print
-        self.extracted_data = None
-        self.extraction_complete = False
-        self.window = None
-        
-    def log(self, message):
-        """Log com callback personalizado"""
-        if self.log_callback:
-            self.log_callback(message)
-    
-    def create_html_content(self, youtube_url):
-        """Cria o conteúdo HTML para extração de dados do YouTube"""
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>YouTube Data Extractor</title>
-            <style>
-                body {{
-                    font-family: Arial, sans-serif;
-                    margin: 20px;
-                    background: #f5f5f5;
-                }}
-                .container {{
-                    max-width: 800px;
-                    margin: 0 auto;
-                    background: white;
-                    padding: 20px;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                }}
-                .status {{
-                    padding: 10px;
-                    margin: 10px 0;
-                    border-radius: 4px;
-                    background: #e3f2fd;
-                    border-left: 4px solid #2196f3;
-                }}
-                .error {{
-                    background: #ffebee;
-                    border-left-color: #f44336;
-                }}
-                .success {{
-                    background: #e8f5e8;
-                    border-left-color: #4caf50;
-                }}
-                button {{
-                    background: #2196f3;
-                    color: white;
-                    border: none;
-                    padding: 10px 20px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    margin: 5px;
-                }}
-                button:hover {{
-                    background: #1976d2;
-                }}
-                #videoFrame {{
-                    width: 100%;
-                    height: 400px;
-                    border: 1px solid #ddd;
-                    border-radius: 4px;
-                }}
-                .data-section {{
-                    margin: 20px 0;
-                    padding: 15px;
-                    background: #f9f9f9;
-                    border-radius: 4px;
-                }}
-                pre {{
-                    background: #263238;
-                    color: #fff;
-                    padding: 15px;
-                    border-radius: 4px;
-                    overflow-x: auto;
-                    font-size: 12px;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>🎥 YouTube Data Extractor</h1>
-                <div class="status" id="status">Inicializando extrator...</div>
-                
-                <div>
-                    <button onclick="loadVideo()">🔄 Carregar Vídeo</button>
-                    <button onclick="extractData()">📊 Extrair Dados</button>
-                    <button onclick="testAntiBot()">🛡️ Testar Anti-Bot</button>
-                    <button onclick="extractNsig()">🔐 Extrair NSig</button>
-                </div>
-                
-                <iframe id="videoFrame" src="about:blank"></iframe>
-                
-                <div class="data-section">
-                    <h3>📋 Dados Extraídos:</h3>
-                    <pre id="extractedData">Nenhum dado extraído ainda...</pre>
-                </div>
-                
-                <div class="data-section">
-                    <h3>🔍 Logs de Depuração:</h3>
-                    <pre id="debugLogs">Aguardando operações...</pre>
-                </div>
-            </div>
-            
-            <script>
-                const YOUTUBE_URL = '{youtube_url}';
-                let extractedInfo = {{}};
-                
-                function log(message) {{
-                    const timestamp = new Date().toLocaleTimeString();
-                    const logElement = document.getElementById('debugLogs');
-                    logElement.textContent += `[${{timestamp}}] ${{message}}\\n`;
-                    logElement.scrollTop = logElement.scrollHeight;
-                }}
-                
-                function updateStatus(message, type = 'info') {{
-                    const statusElement = document.getElementById('status');
-                    statusElement.textContent = message;
-                    statusElement.className = `status ${{type}}`;
-                    log(`Status: ${{message}}`);
-                }}
-                
-                function loadVideo() {{
-                    updateStatus('Carregando vídeo do YouTube...', 'info');
-                    const iframe = document.getElementById('videoFrame');
-                    
-                    // Usar embed URL para evitar detecção
-                    const videoId = extractVideoId(YOUTUBE_URL);
-                    if (videoId) {{
-                        iframe.src = `https://www.youtube.com/embed/${{videoId}}?autoplay=0&controls=1`;
-                        updateStatus('Vídeo carregado com sucesso!', 'success');
-                        log(`Vídeo ID extraído: ${{videoId}}`);
-                    }} else {{
-                        updateStatus('Erro: URL do YouTube inválida', 'error');
-                    }}
-                }}
-                
-                function extractVideoId(url) {{
-                    const regex = /(?:youtube\\.com\\/(?:[^\\/]+\\/.+\\/|(?:v|e(?:mbed)?)\\/|.*[?&]v=)|youtu\\.be\\/)([^"&?\\/\\s]{{11}})/;
-                    const match = url.match(regex);
-                    return match ? match[1] : null;
-                }}
-                
-                async function extractData() {{
-                    updateStatus('Extraindo dados do navegador...', 'info');
-                    
-                    try {{
-                        // Coletar informações do navegador
-                        const browserInfo = {{
-                            userAgent: navigator.userAgent,
-                            language: navigator.language,
-                            platform: navigator.platform,
-                            cookieEnabled: navigator.cookieEnabled,
-                            onLine: navigator.onLine,
-                            hardwareConcurrency: navigator.hardwareConcurrency,
-                            maxTouchPoints: navigator.maxTouchPoints,
-                            vendor: navigator.vendor,
-                            vendorSub: navigator.vendorSub,
-                            productSub: navigator.productSub,
-                            appName: navigator.appName,
-                            appVersion: navigator.appVersion,
-                            timestamp: new Date().toISOString(),
-                            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                            screen: {{
-                                width: screen.width,
-                                height: screen.height,
-                                colorDepth: screen.colorDepth,
-                                pixelDepth: screen.pixelDepth
-                            }},
-                            window: {{
-                                innerWidth: window.innerWidth,
-                                innerHeight: window.innerHeight,
-                                outerWidth: window.outerWidth,
-                                outerHeight: window.outerHeight
-                            }}
-                        }};
-                        
-                        // Testar capacidades JavaScript
-                        const capabilities = {{
-                            localStorage: typeof(Storage) !== "undefined",
-                            sessionStorage: typeof(Storage) !== "undefined",
-                            webGL: !!window.WebGLRenderingContext,
-                            webGL2: !!window.WebGL2RenderingContext,
-                            canvas: !!document.createElement('canvas').getContext,
-                            geolocation: !!navigator.geolocation,
-                            notifications: !!window.Notification,
-                            serviceWorker: !!navigator.serviceWorker,
-                            webRTC: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
-                        }};
-                        
-                        // Coletar cookies
-                        const cookies = document.cookie;
-                        
-                        extractedInfo = {{
-                            url: YOUTUBE_URL,
-                            videoId: extractVideoId(YOUTUBE_URL),
-                            browserInfo,
-                            capabilities,
-                            cookies: cookies || 'Nenhum cookie encontrado',
-                            extractionTime: new Date().toISOString()
-                        }};
-                        
-                        // Exibir dados extraídos
-                        document.getElementById('extractedData').textContent = JSON.stringify(extractedInfo, null, 2);
-                        updateStatus('Dados extraídos com sucesso!', 'success');
-                        
-                        // Enviar dados para Python (se disponível)
-                        if (window.pywebview) {{
-                            window.pywebview.api.receive_data(extractedInfo);
-                        }}
-                        
-                    }} catch (error) {{
-                        updateStatus(`Erro na extração: ${{error.message}}`, 'error');
-                        log(`Erro: ${{error.stack}}`);
-                    }}
-                }}
-                
-                async function testAntiBot() {{
-                    updateStatus('Testando capacidades anti-bot...', 'info');
-                    
-                    try {{
-                        const tests = {{
-                            webdriver: navigator.webdriver === undefined,
-                            plugins: navigator.plugins.length > 0,
-                            languages: navigator.languages && navigator.languages.length > 1,
-                            permissions: !!navigator.permissions,
-                            connection: !!navigator.connection,
-                            deviceMemory: !!navigator.deviceMemory,
-                            bluetooth: !!navigator.bluetooth,
-                            usb: !!navigator.usb,
-                            mediaDevices: !!navigator.mediaDevices,
-                            battery: !!navigator.getBattery,
-                            clipboard: !!navigator.clipboard
-                        }};
-                        
-                        const score = Object.values(tests).filter(Boolean).length;
-                        const maxScore = Object.keys(tests).length;
-                        
-                        log(`Teste Anti-Bot: ${{score}}/${{maxScore}} características humanas detectadas`);
-                        
-                        if (score >= maxScore * 0.7) {{
-                            updateStatus(`✅ Anti-Bot: ${{score}}/${{maxScore}} - Navegador parece humano`, 'success');
-                        }} else {{
-                            updateStatus(`⚠️ Anti-Bot: ${{score}}/${{maxScore}} - Possível detecção de bot`, 'error');
-                        }}
-                        
-                        extractedInfo.antiBotTests = tests;
-                        extractedInfo.antiBotScore = `${{score}}/${{maxScore}}`;
-                        
-                    }} catch (error) {{
-                        updateStatus(`Erro no teste anti-bot: ${{error.message}}`, 'error');
-                    }}
-                }}
-                
-                async function extractNsig() {{
-                    updateStatus('Tentando extrair nsig do YouTube...', 'info');
-                    
-                    try {{
-                        // Esta é uma implementação simplificada
-                        // Em um cenário real, seria necessário analisar o JavaScript do YouTube
-                        const videoId = extractVideoId(YOUTUBE_URL);
-                        if (!videoId) {{
-                            throw new Error('ID do vídeo não encontrado');
-                        }}
-                        
-                        // Simular extração de nsig (implementação real seria mais complexa)
-                        const mockNsig = {{
-                            videoId: videoId,
-                            timestamp: Date.now(),
-                            signature: 'mock_signature_' + Math.random().toString(36).substr(2, 9),
-                            playerVersion: 'unknown',
-                            extractionMethod: 'browser_simulation'
-                        }};
-                        
-                        extractedInfo.nsig = mockNsig;
-                        updateStatus('NSig extraído (simulação)', 'success');
-                        log(`NSig simulado: ${{mockNsig.signature}}`);
-                        
-                    }} catch (error) {{
-                        updateStatus(`Erro na extração de nsig: ${{error.message}}`, 'error');
-                    }}
-                }}
-                
-                // Inicialização automática
-                window.addEventListener('load', function() {{
-                    updateStatus('Navegador carregado e pronto!', 'success');
-                    log('Sistema de extração inicializado');
-                    
-                    // Auto-carregar vídeo se URL válida
-                    if (YOUTUBE_URL && YOUTUBE_URL !== '') {{
-                        setTimeout(loadVideo, 1000);
-                    }}
-                }});
-                
-                // Detectar mudanças no iframe
-                document.getElementById('videoFrame').addEventListener('load', function() {{
-                    log('Iframe carregado');
-                }});
-            </script>
-        </body>
-        </html>
-        """
-    
-    def extract_youtube_data(self, youtube_url, timeout=30):
-        """
-        Extrai dados do YouTube usando PyWebView
-        """
-        if not WEBVIEW_AVAILABLE:
-            self.log("❌ PyWebView não está disponível")
-            return None
-            
-        self.log(f"🚀 Iniciando extração para: {youtube_url}")
-        self.extracted_data = None
-        self.extraction_complete = False
-        
-        try:
-            # Criar conteúdo HTML
-            html_content = self.create_html_content(youtube_url)
-            
-            # Configurar API para comunicação
-            class API:
-                def __init__(self, extractor):
-                    self.extractor = extractor
-                
-                def receive_data(self, data):
-                    self.extractor.extracted_data = data
-                    self.extractor.extraction_complete = True
-                    self.extractor.log("✅ Dados recebidos do navegador")
-                    return "OK"
-            
-            api = API(self)
-            
-            # Criar janela PyWebView
-            self.log("🌐 Abrindo navegador integrado...")
-            self.window = webview.create_window(
-                title="YouTube Data Extractor",
-                html=html_content,
-                width=900,
-                height=700,
-                js_api=api
-            )
-            
-            # Usar uma abordagem não-bloqueante para PyWebView
-            self.log("⚠️ PyWebView requer thread principal - usando método alternativo")
-            
-            # Simular extração de dados (fallback para método tradicional)
-            # Em uma implementação futura, isso poderia usar selenium ou outro método
-            self.log("🔄 Usando método de extração alternativo...")
-            
-            # Por enquanto, retornar None para usar o fallback do yt-dlp
-            return None
-                
-        except Exception as e:
-            self.log(f"❌ Erro na extração: {str(e)}")
-            return None
-        finally:
-            # Limpar recursos
-            if self.window:
-                try:
-                    webview.destroy_window(self.window)
-                except:
-                    pass
-    
-    def extract_formats_from_data(self, data):
-        """
-        Converte dados extraídos em formatos compatíveis com yt-dlp
-        """
-        if not data:
-            return []
-        
-        # Esta é uma implementação simplificada
-        # Em um cenário real, seria necessário analisar os dados do YouTube
-        formats = []
-        
-        video_id = data.get('videoId')
-        if video_id:
-            # Simular formatos baseados no video_id
-            mock_formats = [
-                {'format_id': '18', 'ext': 'mp4', 'height': 360, 'resolution': '360p'},
-                {'format_id': '22', 'ext': 'mp4', 'height': 720, 'resolution': '720p'},
-                {'format_id': '137', 'ext': 'mp4', 'height': 1080, 'resolution': '1080p'},
-            ]
-            formats.extend(mock_formats)
-        
-        return formats
+
 
 
 class MainWindow:
@@ -468,7 +77,7 @@ class MainWindow:
         self.update_checker = UpdateChecker("usuario/vidconv")
         
         # Inicializar extrator de navegador avançado
-        self.browser_extractor = YouTubeBrowserExtractor(log_callback=self.log_youtube)
+
 
         # Configurar estilo
         self.setup_style()
@@ -481,24 +90,60 @@ class MainWindow:
 
         # Verificar FFmpeg na inicialização
         self.check_ffmpeg_installation()
-        
-        # Configurar sistema de atualização
-        self.setup_update_system()
 
     def log(self, message):
         """
-        Adiciona uma mensagem ao log da interface gráfica.
+        Adiciona mensagem ao log de forma thread-safe
         """
-        self.log_text.insert(tk.END, message + "\n")
-        self.log_text.see(tk.END)
+        def update_gui():
+            try:
+                if hasattr(self, "log_text") and self.log_text.winfo_exists():
+                    from datetime import datetime
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    log_entry = f"[{timestamp}] {message}\n"
+                    self.log_text.insert(tk.END, log_entry)
+                    self.log_text.see(tk.END)
+                else:
+                    print(f"[LOG] {message}")
+            except RuntimeError:
+                # Ocorre em testes quando a GUI não está no loop principal
+                print(f"[LOG-FALLBACK] {message}")
+
+        if hasattr(self, "root"):
+            try:
+                self.root.after(0, update_gui)
+            except RuntimeError:
+                # Fallback para quando o root não está mais no mainloop
+                update_gui()
+        else:
+            update_gui() # Execução direta para testes
 
     def log_youtube(self, message):
         """
-        Adiciona uma mensagem ao log do YouTube.
+        Adiciona mensagem ao log do YouTube de forma thread-safe
         """
-        if hasattr(self, 'youtube_log_text'):
-            self.youtube_log_text.insert(tk.END, message + "\n")
-            self.youtube_log_text.see(tk.END)
+        def update_gui():
+            try:
+                if hasattr(self, "youtube_log_text") and self.youtube_log_text.winfo_exists():
+                    from datetime import datetime
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    log_entry = f"[{timestamp}] {message}\n"
+                    self.youtube_log_text.insert(tk.END, log_entry)
+                    self.youtube_log_text.see(tk.END)
+                else:
+                    print(f"[YTLOG] {message}")
+            except RuntimeError:
+                # Ocorre em testes quando a GUI não está no loop principal
+                print(f"[YTLOG-FALLBACK] {message}")
+
+        if hasattr(self, "root"):
+            try:
+                self.root.after(0, update_gui)
+            except RuntimeError:
+                # Fallback para quando o root não está mais no mainloop
+                update_gui()
+        else:
+            update_gui() # Execução direta para testes
 
     def setup_style(self):
         """
@@ -625,6 +270,37 @@ class MainWindow:
         ttk.Button(
             buttons_frame, text="Limpar Tudo", command=self.clear_fields
         ).pack(side=tk.LEFT, padx=(0, 10))
+
+        # Separador visual
+        ttk.Separator(buttons_frame, orient='vertical').pack(side=tk.LEFT, fill='y', padx=5)
+
+        # Botões de ação
+        self.convert_btn = ttk.Button(
+            buttons_frame, text="Converter", command=self.start_conversion
+        )
+        self.convert_btn.pack(side=tk.LEFT, padx=(5, 5))
+
+        self.cancel_btn = ttk.Button(
+            buttons_frame,
+            text="Cancelar",
+            command=self.cancel_conversion,
+            state="disabled",
+        )
+        self.cancel_btn.pack(side=tk.LEFT, padx=(0, 5))
+
+        # Botão de atualização (criado manualmente para usar pack)
+        self.update_btn = tk.Button(
+            buttons_frame,
+            text="🔄 Verificar Atualizações",
+            command=self.update_widget.manual_check,
+            font=('Arial', 9),
+            bg='#f0f0f0',
+            relief='raised',
+            bd=1,
+            padx=10,
+            pady=2
+        )
+        self.update_btn.pack(side=tk.LEFT, padx=(0, 5))
 
         # Lista de arquivos
         list_frame = ttk.Frame(file_frame)
@@ -809,9 +485,9 @@ class MainWindow:
         try:
             resolution = self.resolution_var.get()
             if resolution == "Original" or not resolution:
-                format_selector = 'best'
+                format_selector = None  # Deixa o yt-dlp escolher o melhor formato
             else:
-                format_selector = f'bestvideo[height<={resolution[:-1]}]+bestaudio'
+                format_selector = f'bestvideo[height<={resolution[:-1]}]+bestaudio/best'
 
             ffmpeg_location = self.ffmpeg_installer.get_ffmpeg_command()
 
@@ -840,9 +516,9 @@ class MainWindow:
         try:
             resolution = self.resolution_var.get()
             if resolution == "Original" or not resolution:
-                format_selector = 'best'
+                format_selector = None  # Deixa o yt-dlp escolher o melhor formato
             else:
-                format_selector = f'bestvideo[height<={resolution[:-1]}]+bestaudio'
+                format_selector = f'bestvideo[height<={resolution[:-1]}]+bestaudio/best'
 
             ffmpeg_location = self.ffmpeg_installer.get_ffmpeg_command()
 
@@ -853,27 +529,6 @@ class MainWindow:
                 'progress_hooks': [self.on_yt_dlp_progress],
                 'ffmpeg_location': ffmpeg_location,
                 'nocheckcertificate': True,
-                
-                # Configurações para contornar verificação de bot do YouTube
-                'extractor_args': {
-                    'youtube': {
-                        'player_client': ['mweb', 'web'],  # Usar cliente mobile web como fallback
-                        'player_skip': ['webpage'],
-                        'comment_sort': ['top'],
-                        'max_comments': [20, 100, 'all'],
-                    }
-                },
-                
-                # Headers para simular navegador real
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-us,en;q=0.5',
-                    'Accept-Encoding': 'gzip,deflate',
-                    'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
-                    'Keep-Alive': '300',
-                    'Connection': 'keep-alive',
-                },
                 
                 # Configurações adicionais para estabilidade
                 'retries': 3,
@@ -891,10 +546,6 @@ class MainWindow:
                 try:
                     if browser:
                         try:
-                            # Verificar se o navegador está disponível antes de tentar usar cookies
-                            import os
-                            import platform
-                            
                             browser_name = browser[0]
                             can_use_cookies = False
                             
@@ -1848,28 +1499,9 @@ class MainWindow:
 
     def create_actions_section(self, parent, row):
         """
-        Cria a seção de ações
+        Cria a seção de ações (vazia - botões movidos para seção de arquivos)
         """
-        # Frame de ações
-        actions_frame = ttk.Frame(parent)
-        actions_frame.grid(row=row, column=0, columnspan=2, pady=10)
-
-        # Botões
-        self.convert_btn = ttk.Button(
-            actions_frame, text="Converter", command=self.start_conversion
-        )
-        self.convert_btn.grid(row=0, column=0, padx=5)
-
-        self.cancel_btn = ttk.Button(
-            actions_frame,
-            text="Cancelar",
-            command=self.cancel_conversion,
-            state="disabled",
-        )
-        self.cancel_btn.grid(row=0, column=1, padx=5)
-
-        # Botão de atualização
-        self.update_widget.create_button(actions_frame, row=0, column=2, padx=5)
+        pass
 
     def create_logs_tab_content(self, parent):
         """
@@ -1904,17 +1536,11 @@ class MainWindow:
         header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
         header_frame.columnconfigure(0, weight=1)
 
-        # Botão de limpar logs de conversão
-        self.clear_conversion_log_btn = ttk.Button(
-            header_frame, text="🗑️ Limpar Tudo", command=self.clear_conversion_logs, width=12
-        )
-        self.clear_conversion_log_btn.grid(row=0, column=1, sticky=tk.E, padx=(0, 5))
-
         # Botão de salvar log com ícone de disquete
         self.save_log_btn = ttk.Button(
             header_frame, text="💾 Salvar Log", command=self.save_log_manually, width=12
         )
-        self.save_log_btn.grid(row=0, column=2, sticky=tk.E)
+        self.save_log_btn.grid(row=0, column=1, sticky=tk.E)
 
         # Área de texto para logs com scroll
         self.log_text = scrolledtext.ScrolledText(
@@ -2513,30 +2139,38 @@ class MainWindow:
         except Exception as e:
             self.log_message(f"Erro ao configurar tooltips: {str(e)}")
 
-    def log_message(self, message):
+    def log_message(self, message, level='INFO'):
         """
-        Adiciona mensagem ao log e salva automaticamente
+        Adiciona mensagem ao log de forma thread-safe e salva em arquivo.
         """
-        from datetime import datetime
+        def update_gui():
+            try:
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%H:%M:%S")
+                log_entry = f"[{timestamp}] [{level}] {message}\n"
 
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        log_entry = f"[{timestamp}] {message}\n"
+                if hasattr(self, 'log_text') and self.log_text.winfo_exists():
+                    self.log_text.insert(tk.END, log_entry)
+                    self.log_text.see(tk.END)
+                else:
+                    print(log_entry.strip())
 
-        # Adicionar ao buffer de logs
-        if hasattr(self, "log_buffer"):
-            self.log_buffer.append(log_entry)
-
-        # Verificar se log_text existe antes de tentar usá-lo
-        if hasattr(self, "log_text") and self.log_text:
-            self.log_text.insert(tk.END, log_entry)
-            self.log_text.see(tk.END)
-
-            # Salvamento automático a cada 10 mensagens ou em eventos importantes
-            if hasattr(self, "log_buffer") and len(self.log_buffer) % 10 == 0:
+                if not hasattr(self, 'log_buffer'):
+                    self.log_buffer = []
+                self.log_buffer.append(log_entry)
                 self._auto_save_log()
+            except RuntimeError:
+                print(f"[LOG-FALLBACK] {message}")
+            except Exception as e:
+                print(f"Erro interno no log_message: {e}")
+
+        if hasattr(self, 'root'):
+            try:
+                self.root.after(0, update_gui)
+            except RuntimeError:
+                update_gui()
         else:
-            # Se log_text não existe ainda, imprimir no console como fallback
-            print(log_entry.strip())
+            update_gui()
 
     def _auto_save_log(self):
         """
@@ -2999,37 +2633,45 @@ class MainWindow:
 
     def check_ffmpeg_installation(self):
         """
-        Verifica instalação do FFmpeg
+        Verifica a instalação do FFmpeg de forma segura em uma thread separada,
+        garantindo que todas as atualizações da GUI sejam executadas na thread principal.
         """
 
+        def update_gui(callback, *args):
+            """Agenda a execução de uma função na thread principal da GUI."""
+            self.root.after(0, callback, *args)
+
         def check_and_install():
+            """
+            Lógica de verificação e instalação do FFmpeg.
+            As interações com a GUI são delegadas para `update_gui`.
+            """
             if not self.ffmpeg_installer.is_ffmpeg_installed():
-                self.log_message(
-                    "FFmpeg não encontrado. Iniciando instalação automática..."
-                )
-                self.status_var.set("Instalando FFmpeg...")
+                update_gui(self.log_message, "FFmpeg não encontrado. Iniciando instalação automática...")
+                update_gui(self.status_var.set, "Instalando FFmpeg...")
 
                 try:
                     success = self.ffmpeg_installer.install_ffmpeg()
                     if success:
-                        self.log_message("✓ FFmpeg instalado com sucesso!")
-                        self.status_var.set("FFmpeg instalado - Pronto para conversão")
+                        update_gui(self.log_message, "✓ FFmpeg instalado com sucesso!")
+                        update_gui(self.status_var.set, "FFmpeg instalado - Pronto para conversão")
                     else:
-                        self.log_message("✗ Falha na instalação do FFmpeg")
-                        self.status_var.set("Erro na instalação do FFmpeg")
+                        update_gui(self.log_message, "✗ Falha na instalação do FFmpeg")
+                        update_gui(self.status_var.set, "Erro na instalação do FFmpeg")
                 except Exception as e:
-                    self.log_message(f"✗ Erro na instalação do FFmpeg: {str(e)}")
-                    self.status_var.set("Erro na instalação do FFmpeg")
-                    messagebox.showwarning(
+                    update_gui(self.log_message, f"✗ Erro na instalação do FFmpeg: {str(e)}")
+                    update_gui(self.status_var.set, "Erro na instalação do FFmpeg")
+                    update_gui(
+                        messagebox.showwarning,
                         "Aviso",
                         "Não foi possível instalar o FFmpeg automaticamente. "
                         "Instale manualmente para usar o conversor.",
                     )
             else:
-                self.log_message("✓ FFmpeg encontrado e pronto para uso")
-                self.status_var.set("Pronto para conversão")
+                update_gui(self.log_message, "✓ FFmpeg encontrado e pronto para uso")
+                update_gui(self.status_var.set, "Pronto para conversão")
 
-        # Executar verificação em thread separada
+        # Executar verificação em thread separada para não bloquear a GUI
         threading.Thread(target=check_and_install, daemon=True).start()
 
     def setup_update_system(self):
@@ -3040,8 +2682,8 @@ class MainWindow:
         self.update_widget.set_log_callback(self.log_message)
         self.update_widget.set_status_callback(self.update_status_bar)
         
-        # Verificar atualizações na inicialização (após 3 segundos)
-        self.root.after(3000, self.check_updates_on_startup)
+        # Verificar atualizações na inicialização (desativado)
+        # self.root.after(3000, self.check_updates_on_startup)
         
         # Configurar verificação periódica (a cada hora = 3600000 ms)
         self.setup_periodic_update_check()
