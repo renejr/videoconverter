@@ -659,6 +659,30 @@ Se o instalador automático falhar ou você usar instalação manual:
 - **Fallback automático CPU quando CUDA não disponível**
 - **Otimizações de performance para conversão**
 
+## 🎯 Melhorias Recentes - Sistema de Validação de Resolução
+
+### Problema Resolvido
+O sistema anteriormente baixava vídeos em resolução incorreta (360p) quando solicitado 1080p, devido ao uso prioritário da estratégia "Android Player" que não suporta códigos específicos de formato.
+
+### Solução Implementada
+- **Reordenação Inteligente de Estratégias**: Priorização de estratégias que suportam códigos específicos
+- **Sistema de Validação**: Verificação automática da resolução baixada vs. solicitada
+- **Fallback Automático**: Tentativa da próxima estratégia se a resolução estiver incorreta
+- **Logs Detalhados**: Rastreamento completo do processo de download e validação
+
+### Estratégias de Download (Nova Ordem)
+1. **Web + Firefox** - Suporte completo a códigos específicos
+2. **Web sem cookies** - Alternativa robusta
+3. **TV Player + Edge** - Para conteúdo restrito
+4. **Básico** - Estratégia padrão
+5. **Android Player** - Último recurso (limitações de formato)
+
+### Benefícios
+- ✅ Garantia de resolução correta
+- ✅ Maior taxa de sucesso em downloads
+- ✅ Melhor experiência do usuário
+- ✅ Logs mais informativos
+
 ## 🤝 Contribuição
 
 1. Faça um fork do projeto

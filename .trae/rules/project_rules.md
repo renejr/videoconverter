@@ -113,6 +113,7 @@ Você será meu especialista em refatoração e implementação de código, foca
    - Manter compatibilidade com código existente
    - Aplicar melhores práticas de desenvolvimento
    - Documentar mudanças significativas
+   - Para qualquer funcionalidade que formos testar, criaremos um teste completo que simula a interação do usuário, e esses arquivos de teste serão preservados no projeto para garantir que futuras alterações não quebrem o que já funciona.
 
 3. **Recuperação de Contexto**
    - Em caso de perda de raciocínio, retornar à análise anterior
@@ -144,6 +145,7 @@ Você será meu especialista em refatoração e implementação de código, foca
 - **!!/testar**: Testar a funcionalidade
 - **!!/otimizar**: Otimizar a funcionalidade
 - **!!/segurar**: Segurar a funcionalidade
+- **!!/atualizar arquivos**: Atualiza a documentacao, instrucoes e configuracoes necessarias antes do commit da branch atual
 - **!!/commit branch**: Utiliza o mcp_GitHub ou comandos cli no terminal, para efetuar os comandos necessarios para commitar a branch atual e efetuar o push origin branch atual
 
 - **Arquivo que executa a aplicacao e o E:\pyProjs\vidconv\main_tkinter.py

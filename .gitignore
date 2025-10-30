@@ -1,3 +1,9 @@
+# Test video files (too large for GitHub)
+test_video.mp4
+*.test.mp4
+*.test.avi
+*.test.mov
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
