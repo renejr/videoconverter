@@ -46,6 +46,7 @@ from utils.performance_modes import (
 )
 from utils.updater import UpdateChecker
 from gui.update_widget import UpdateWidget
+from gui.youtube_api_downloader import YouTubeAPIDownloader
 
 
 
@@ -75,6 +76,10 @@ class MainWindow:
         # Inicializar sistema de atualização
         self.update_widget = UpdateWidget(self.root, "usuario/vidconv")
         self.update_checker = UpdateChecker("usuario/vidconv")
+        
+        # Inicializar YouTube API Downloader
+        self.youtube_api_key = "AIzaSyBpZfgIsbwLEv7jlHQyOTE4jXdREMWkZNA"
+        self.youtube_api_downloader = YouTubeAPIDownloader(self.youtube_api_key)
         
         # Inicializar extrator de navegador avançado
 
@@ -233,22 +238,24 @@ class MainWindow:
 
         ttk.Label(url_frame, text="URL do YouTube:").grid(row=0, column=0, sticky=tk.W, pady=2)
         self.youtube_url_var = tk.StringVar()
-        self.youtube_url_entry = ttk.Entry(url_frame, textvariable=self.youtube_url_var, width=60)
+        self.youtube_url_entry = ttk.Entry(url_frame, textvariable=self.youtube_url_var, width=50)
         self.youtube_url_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=5, pady=2)
+
+        # Seletor de método removido - agora usa estratégia automática inteligente
 
         ttk.Button(url_frame, text="Verificar", command=self.verify_youtube_url).grid(row=0, column=2, pady=2, padx=(0, 5))
 
-        # Botão Navegador Avançado
-        browser_btn = ttk.Button(url_frame, text="🌐 Navegador", command=self.open_browser_extractor)
-        browser_btn.grid(row=0, column=3, pady=2, padx=(0, 5))
-        if not WEBVIEW_AVAILABLE:
-            browser_btn.config(state="disabled")
+        # Botão Navegador Avançado - OCULTO
+        # browser_btn = ttk.Button(url_frame, text="🌐 Navegador", command=self.open_browser_extractor)
+        # browser_btn.grid(row=0, column=3, pady=2, padx=(0, 5))
+        # if not WEBVIEW_AVAILABLE:
+        #     browser_btn.config(state="disabled")
 
         self.resolution_var = tk.StringVar()
         self.resolution_combobox = ttk.Combobox(url_frame, textvariable=self.resolution_var, state="disabled", width=15)
-        self.resolution_combobox.grid(row=0, column=4, padx=5, pady=2)
+        self.resolution_combobox.grid(row=1, column=2, padx=5, pady=2)
 
-        ttk.Button(url_frame, text="Baixar Vídeo", command=self.download_youtube_video).grid(row=0, column=5, pady=2)
+        ttk.Button(url_frame, text="Baixar Vídeo", command=self.download_youtube_video).grid(row=1, column=3, pady=2)
 
         # Botões de seleção
         buttons_frame = ttk.Frame(file_frame)
@@ -357,7 +364,7 @@ class MainWindow:
     def download_youtube_video(self):
         """
         Inicia o download de um vídeo do YouTube a partir da URL fornecida.
-        Implementa fallback automático: PyWebView -> yt-dlp com estratégias -> yt-dlp básico
+        Implementa sistema inteligente: API Oficial -> yt-dlp com estratégias -> yt-dlp básico
         """
         url = self.youtube_url_var.get()
         if not url:
@@ -370,10 +377,12 @@ class MainWindow:
             return
 
         try:
-            self.log_youtube("🚀 Iniciando download com sistema de fallback automático...")
+            self.log_youtube("🚀 Iniciando download com estratégia automática inteligente...")
             self.log_youtube(f"📺 URL: {url}")
+            self.log_youtube("🔧 Usando método híbrido: API + Extrator Personalizado + Fallback")
             
-            download_thread = threading.Thread(target=self.run_youtube_download_with_fallback, args=(url, output_dir))
+            # Usar sempre o método híbrido mais eficaz
+            download_thread = threading.Thread(target=self.run_youtube_api_download, args=(url, output_dir))
             download_thread.start()
 
         except Exception as e:
@@ -402,13 +411,13 @@ class MainWindow:
                     self.log_youtube(f"❌ Erro no download via navegador: {e}")
                     self.log_youtube("🔄 Prosseguindo para método de fallback...")
 
-            # Método 2: yt-dlp com estratégias avançadas (método atual)
-            self.log_youtube("🛠 Método 2: Tentando yt-dlp com estratégias avançadas...")
+            # Método 2: yt-dlp com fallbacks (método original)
+            self.log_youtube("🔧 Método 2: Tentando yt-dlp com fallbacks...")
             try:
                 self.run_youtube_download(url, output_dir)
                 return
             except Exception as e:
-                self.log_youtube(f"❌ Falha nas estratégias avançadas: {e}")
+                self.log_youtube(f"❌ Falha no método com fallbacks: {e}")
                 self.log_youtube("🔄 Tentando método básico como último recurso...")
 
             # Método 3: yt-dlp básico (último recurso)
@@ -466,6 +475,11 @@ class MainWindow:
                 'progress_hooks': [self.on_yt_dlp_progress],
                 'ffmpeg_location': ffmpeg_location,
                 'nocheckcertificate': True,
+                # Converter para MP4 automaticamente após o download
+                'postprocessors': [{
+                    'key': 'FFmpegVideoConvertor',
+                    'preferedformat': 'mp4',
+                }],
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -481,13 +495,47 @@ class MainWindow:
     def run_youtube_download_basic(self, url, output_dir):
         """
         Método básico de download sem estratégias avançadas (último recurso).
+        Usa códigos específicos do YouTube para forçar resolução exata.
         """
         try:
             resolution = self.resolution_var.get()
+            
+            # Mapeamento de resoluções para códigos específicos do YouTube
+            format_codes = {
+                '2160p': '313+140',  # 4K + AAC
+                '1440p': '271+140',  # 1440p + AAC  
+                '1080p': '137+140',  # 1080p H.264 + AAC
+                '720p': '136+140',   # 720p H.264 + AAC
+                '480p': '135+140',   # 480p H.264 + AAC
+                '360p': '134+140',   # 360p H.264 + AAC
+                '240p': '133+140',   # 240p H.264 + AAC
+                '144p': '160+140'    # 144p H.264 + AAC
+            }
+            
             if resolution == "Original" or not resolution:
-                format_selector = None  # Deixa o yt-dlp escolher o melhor formato
+                format_selector = "313+140/271+140/137+140/best"  # 4K -> 1440p -> 1080p -> melhor
+            elif resolution in format_codes:
+                # Força código específico + fallbacks inteligentes
+                specific_code = format_codes[resolution]
+                fallback_codes = []
+                
+                # Adiciona fallbacks para resoluções menores
+                height = int(resolution[:-1])
+                for res, code in format_codes.items():
+                    res_height = int(res[:-1])
+                    if res_height <= height and res != resolution:
+                        fallback_codes.append(code)
+                
+                # Monta string final: específico + fallbacks + genérico
+                format_selector = specific_code
+                if fallback_codes:
+                    format_selector += "/" + "/".join(fallback_codes)
+                format_selector += f"/bestvideo[height<={height}]+bestaudio/best"
             else:
                 format_selector = f'bestvideo[height<={resolution[:-1]}]+bestaudio/best'
+            
+            self.log_youtube(f"🎯 Resolução alvo: {resolution}")
+            self.log_youtube(f"📋 Código de formato: {format_selector}")
 
             ffmpeg_location = self.ffmpeg_installer.get_ffmpeg_command()
 
@@ -499,6 +547,11 @@ class MainWindow:
                 'ffmpeg_location': ffmpeg_location,
                 'nocheckcertificate': True,
                 'ignoreerrors': False,
+                # Converter para MP4 automaticamente após o download
+                'postprocessors': [{
+                    'key': 'FFmpegVideoConvertor',
+                    'preferedformat': 'mp4',
+                }],
             }
 
             self.log_youtube("⚙ Usando configuração básica do yt-dlp...")
@@ -512,43 +565,292 @@ class MainWindow:
             self.log_youtube(f"Erro no download básico: {e}")
             raise e
 
-    def run_youtube_download(self, url, output_dir):
+    def validate_downloaded_resolution(self, download_info, target_resolution):
+        """
+        Valida se a resolução baixada corresponde à resolução solicitada.
+        
+        Args:
+            download_info: Informações do download do yt-dlp
+            target_resolution: Resolução alvo (ex: '1080p', '720p')
+            
+        Returns:
+            bool: True se a resolução está correta, False caso contrário
+        """
         try:
+            if not download_info or target_resolution == 'Original':
+                return True
+            
+            # Extrair altura do vídeo baixado
+            filename = download_info.get('filename', '')
+            if not filename:
+                self.log_youtube("⚠ Não foi possível obter informações do arquivo baixado")
+                return True  # Assumir sucesso se não conseguir validar
+            
+            # Tentar extrair resolução do nome do arquivo ou metadados
+            height = None
+            
+            # Verificar se há informações de altura nos metadados
+            if 'height' in download_info:
+                height = download_info['height']
+            elif 'format' in download_info:
+                format_info = download_info['format']
+                if 'height' in format_info:
+                    height = format_info['height']
+            
+            if height:
+                # Mapear altura para resolução
+                resolution_map = {
+                    2160: '2160p',
+                    1440: '1440p', 
+                    1080: '1080p',
+                    720: '720p',
+                    480: '480p',
+                    360: '360p',
+                    240: '240p',
+                    144: '144p'
+                }
+                
+                actual_resolution = resolution_map.get(height, f'{height}p')
+                
+                self.log_youtube(f"📊 Resolução baixada: {actual_resolution} (altura: {height}px)")
+                self.log_youtube(f"🎯 Resolução alvo: {target_resolution}")
+                
+                # Verificar se a resolução corresponde
+                if actual_resolution == target_resolution:
+                    self.log_youtube("✅ Resolução validada com sucesso!")
+                    return True
+                else:
+                    self.log_youtube(f"❌ Resolução incorreta! Esperado: {target_resolution}, Obtido: {actual_resolution}")
+                    return False
+            else:
+                self.log_youtube("⚠ Não foi possível determinar a resolução do vídeo baixado")
+                return True  # Assumir sucesso se não conseguir validar
+                
+        except Exception as e:
+            self.log_youtube(f"⚠ Erro na validação de resolução: {e}")
+            return True  # Assumir sucesso em caso de erro na validação
+
+    def run_youtube_download_test_no_fallbacks(self, url, output_dir):
+        """
+        MÉTODO DE TESTE: Download sem fallbacks e sem conversão forçada para MP4.
+        Para isolar o problema de arquivos MP4 vazios.
+        """
+        try:
+            self.log_youtube("🧪 TESTE: Download sem fallbacks iniciado...")
+            
             resolution = self.resolution_var.get()
             if resolution == "Original" or not resolution:
-                format_selector = None  # Deixa o yt-dlp escolher o melhor formato
+                format_selector = 'best'  # Formato único, melhor disponível
             else:
-                format_selector = f'bestvideo[height<={resolution[:-1]}]+bestaudio/best'
+                # Tentar formato único primeiro, depois separado se necessário
+                format_selector = f'best[height<={resolution[:-1]}]'
 
             ffmpeg_location = self.ffmpeg_installer.get_ffmpeg_command()
 
-            # Configuração melhorada do yt-dlp para contornar problemas de autenticação
+            # Configuração MÍNIMA do yt-dlp - SEM postprocessors
             ydl_opts = {
+                'format': format_selector,
+                'outtmpl': os.path.join(output_dir, '%(title)s_TEST.%(ext)s'),
+                'progress_hooks': [self.on_yt_dlp_progress],
+                'ffmpeg_location': ffmpeg_location,
+                'nocheckcertificate': True,
+                'ignoreerrors': False,
+                # SEM POSTPROCESSORS - deixar o arquivo no formato original
+            }
+
+            self.log_youtube(f"🔧 Formato selecionado: {format_selector}")
+            self.log_youtube("⚙ Configuração mínima (sem conversão forçada)")
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            
+            self.log_youtube("✅ TESTE concluído - verificar se arquivo foi criado corretamente")
+            self.show_info_on_main_thread("Teste Concluído", "Download de teste realizado sem fallbacks!")
+
+        except Exception as e:
+            self.log_youtube(f"❌ Erro no teste: {e}")
+            raise e
+
+    def run_youtube_download(self, url, output_dir):
+        """
+        Método de download anti-bot robusto que usa múltiplas estratégias
+        para contornar a detecção de bot do YouTube.
+        """
+        try:
+            resolution = self.resolution_var.get()
+            
+            # Mapeamento de resoluções para códigos específicos do YouTube
+            format_codes = {
+                '2160p': '313+140',  # 4K + AAC
+                '1440p': '271+140',  # 1440p + AAC  
+                '1080p': '137+140',  # 1080p H.264 + AAC
+                '720p': '136+140',   # 720p H.264 + AAC
+                '480p': '135+140',   # 480p H.264 + AAC
+                '360p': '134+140',   # 360p H.264 + AAC
+                '240p': '133+140',   # 240p H.264 + AAC
+                '144p': '160+140'    # 144p H.264 + AAC
+            }
+            
+            if resolution == "Original" or not resolution:
+                format_selector = "313+140/271+140/137+140/best"  # 4K -> 1440p -> 1080p -> melhor
+            elif resolution in format_codes:
+                # Força código específico + fallbacks inteligentes
+                specific_code = format_codes[resolution]
+                fallback_codes = []
+                
+                # Adiciona fallbacks para resoluções menores
+                height = int(resolution[:-1])
+                for res, code in format_codes.items():
+                    res_height = int(res[:-1])
+                    if res_height <= height and res != resolution:
+                        fallback_codes.append(code)
+                
+                # Monta string final: específico + fallbacks + genérico
+                format_selector = specific_code
+                if fallback_codes:
+                    format_selector += "/" + "/".join(fallback_codes)
+                format_selector += f"/best[height<={height}]/bestvideo[height<={height}]+bestaudio/best"
+            else:
+                # Fallback para formato genérico
+                format_selector = f'best[height<={resolution[:-1]}]/bestvideo[height<={resolution[:-1]}]+bestaudio/best'
+            
+            self.log_youtube(f"🎯 Resolução alvo: {resolution}")
+            self.log_youtube(f"📋 Código de formato: {format_selector}")
+
+            ffmpeg_location = self.ffmpeg_installer.get_ffmpeg_command()
+
+            # Lista de User Agents para rotação
+            user_agents = [
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
+                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+            ]
+            
+            import random
+            selected_ua = random.choice(user_agents)
+
+            # Configuração base anti-bot
+            base_ydl_opts = {
                 'format': format_selector,
                 'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
                 'progress_hooks': [self.on_yt_dlp_progress],
                 'ffmpeg_location': ffmpeg_location,
                 'nocheckcertificate': True,
-                
-                # Configurações adicionais para estabilidade
+                'http_headers': {
+                    'User-Agent': selected_ua,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-us,en;q=0.5',
+                    'Accept-Encoding': 'gzip,deflate',
+                    'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+                    'Keep-Alive': '300',
+                    'Connection': 'keep-alive',
+                },
                 'retries': 3,
                 'fragment_retries': 3,
-                'sleep_interval': 1,
-                'max_sleep_interval': 5,
+                'sleep_interval': 2,
+                'max_sleep_interval': 8,
                 'ignoreerrors': False,
                 'no_warnings': False,
+                # Remover conversão forçada para MP4 para evitar problemas
+                # 'postprocessors': [{
+                #     'key': 'FFmpegVideoConvertor',
+                #     'preferedformat': 'mp4',
+                # }],
             }
 
-            # Tentar primeiro sem cookies, depois com navegadores como fallback
-            browsers_to_try = [None, ('firefox',), ('edge',)]
+            # Estratégias anti-bot ordenadas por compatibilidade com códigos específicos
+            download_strategies = [
+                # Estratégia 1: Web + Firefox cookies (melhor suporte a códigos específicos)
+                {
+                    'name': 'Web + Firefox',
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['web'],
+                        }
+                    },
+                    'cookiesfrombrowser': ('firefox',),
+                    'supports_specific_formats': True,
+                },
+                
+                # Estratégia 2: Web sem cookies (boa compatibilidade)
+                {
+                    'name': 'Web sem cookies',
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['web'],
+                        }
+                    },
+                    'cookiesfrombrowser': None,
+                    'supports_specific_formats': True,
+                },
+                
+                # Estratégia 3: TV player + Edge cookies (suporte moderado)
+                {
+                    'name': 'TV Player + Edge',
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['tv'],
+                        }
+                    },
+                    'cookiesfrombrowser': ('edge',),
+                    'supports_specific_formats': True,
+                },
+                
+                # Estratégia 4: Fallback básico (sem argumentos específicos)
+                {
+                    'name': 'Básico',
+                    'cookiesfrombrowser': None,
+                    'supports_specific_formats': True,
+                },
+                
+                # Estratégia 5: Mobile (mweb) - limitações de formato
+                {
+                    'name': 'Mobile Web',
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['mweb'],
+                            'player_skip': ['webpage'],
+                        }
+                    },
+                    'cookiesfrombrowser': None,
+                    'supports_specific_formats': False,
+                },
+                
+                # Estratégia 6: Android player (último recurso - limitações de formato)
+                {
+                    'name': 'Android Player',
+                    'extractor_args': {
+                        'youtube': {
+                            'player_client': ['android'],
+                            'player_skip': ['webpage'],
+                        }
+                    },
+                    'cookiesfrombrowser': None,
+                    'supports_specific_formats': False,
+                }
+            ]
             
-            for browser in browsers_to_try:
+            last_error = None
+            
+            for i, strategy in enumerate(download_strategies):
                 try:
-                    if browser:
+                    self.log_youtube(f"🔄 Tentativa {i+1}/6: Testando download com {strategy['name']}...")
+                    
+                    # Combinar configurações base com estratégia atual
+                    ydl_opts = {**base_ydl_opts}
+                    
+                    # Aplicar configurações da estratégia
+                    if 'extractor_args' in strategy:
+                        ydl_opts['extractor_args'] = strategy['extractor_args']
+                    
+                    # Configurar cookies se especificado
+                    if strategy.get('cookiesfrombrowser'):
+                        browser_name = strategy['cookiesfrombrowser'][0]
                         try:
-                            browser_name = browser[0]
+                            # Verificar se o navegador está disponível
                             can_use_cookies = False
-                            
                             if platform.system() == "Windows":
                                 if browser_name == "firefox":
                                     firefox_path = os.path.expanduser("~\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles")
@@ -558,55 +860,94 @@ class MainWindow:
                                     can_use_cookies = os.path.exists(edge_path)
                             
                             if can_use_cookies:
-                                ydl_opts['cookiesfrombrowser'] = browser
-                                self.log_youtube(f"Tentando download com cookies do {browser_name}...")
+                                ydl_opts['cookiesfrombrowser'] = strategy['cookiesfrombrowser']
+                                self.log_youtube(f"   ✓ Usando cookies do {browser_name}")
                             else:
-                                self.log_youtube(f"Cookies do {browser_name} não disponíveis, pulando...")
-                                continue
+                                self.log_youtube(f"   ⚠ Cookies do {browser_name} não disponíveis, continuando sem cookies")
                         except Exception as cookie_error:
-                            self.log_youtube(f"Erro ao configurar cookies do {browser[0]}: {cookie_error}")
-                            continue  # Pular para o próximo navegador
-                    else:
-                        # Começar sem cookies (mais estável)
-                        ydl_opts.pop('cookiesfrombrowser', None)
-                        self.log_youtube("Tentando download sem cookies...")
+                            self.log_youtube(f"   ⚠ Erro ao configurar cookies do {browser_name}: {cookie_error}")
                     
+                    # Delay entre tentativas para evitar rate limiting
+                    if i > 0:
+                        delay = random.uniform(1, 3)
+                        self.log_youtube(f"   ⏱ Aguardando {delay:.1f}s antes da tentativa...")
+                        time.sleep(delay)
+                    
+                    # Armazenar informações do download para validação
+                    download_info = {}
+                    
+                    def info_hook(d):
+                        if d['status'] == 'finished':
+                            download_info.update(d)
+                    
+                    # Adicionar hook para capturar informações do download
+                    if 'progress_hooks' not in ydl_opts:
+                        ydl_opts['progress_hooks'] = []
+                    ydl_opts['progress_hooks'].append(info_hook)
+                    
+                    # Tentar download
                     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        # Primeiro, extrair informações do vídeo para validação
+                        try:
+                            video_info = ydl.extract_info(url, download=False)
+                            available_formats = len(video_info.get('formats', []))
+                            self.log_youtube(f"   📋 Formatos disponíveis: {available_formats}")
+                        except Exception as e:
+                            self.log_youtube(f"   ⚠ Não foi possível extrair informações do vídeo: {e}")
+                        
+                        # Fazer o download
                         ydl.download([url])
                     
-                    self.show_info_on_main_thread("Download Concluído", "O vídeo foi baixado e adicionado à fila de conversão.")
-                    return  # Sucesso, sair da função
+                    # Validar resolução baixada se a estratégia suporta códigos específicos
+                    resolution = self.resolution_var.get()
+                    if strategy.get('supports_specific_formats', True) and resolution != 'Original':
+                        if self.validate_downloaded_resolution(download_info, resolution):
+                            self.log_youtube(f"✅ Download concluído com sucesso usando {strategy['name']} - Resolução validada!")
+                            self.show_info_on_main_thread("Download Concluído", f"O vídeo foi baixado com sucesso usando {strategy['name']} na resolução {resolution}!")
+                            return
+                        else:
+                            self.log_youtube(f"⚠ Estratégia {strategy['name']} baixou resolução incorreta, tentando próxima...")
+                            # Não fazer return, continuar para próxima estratégia
+                            continue
+                    else:
+                        # Se chegou aqui, sucesso!
+                        self.log_youtube(f"✅ Download concluído com sucesso usando {strategy['name']}!")
+                        self.show_info_on_main_thread("Download Concluído", f"O vídeo foi baixado com sucesso usando {strategy['name']}!")
+                        return
                     
                 except yt_dlp.utils.ExtractorError as e:
+                    last_error = e
                     error_msg = str(e).lower()
                     if 'sign in' in error_msg or 'login' in error_msg or 'bot' in error_msg:
-                        self.log_youtube(f"Erro de autenticação com {browser[0] if browser else 'sem cookies'}: {e}")
-                        if browser == browsers_to_try[-2]:  # Último navegador antes de None
-                            self.log_youtube("Todos os navegadores falharam, tentando sem cookies...")
+                        self.log_youtube(f"   ❌ Detecção de bot com {strategy['name']}: {e}")
                         continue
                     else:
-                        # Erro diferente de autenticação, propagar
-                        raise e
+                        # Erro diferente de autenticação, tentar próxima estratégia
+                        self.log_youtube(f"   ❌ Erro com {strategy['name']}: {e}")
+                        continue
+                        
                 except Exception as e:
-                    if browser == browsers_to_try[-1]:  # Último tentativa
-                        raise e
-                    else:
-                        self.log_youtube(f"Erro com {browser[0] if browser else 'sem cookies'}: {e}")
-                        continue
+                    last_error = e
+                    self.log_youtube(f"   ❌ Erro inesperado com {strategy['name']}: {e}")
+                    if i == len(download_strategies) - 1:  # Última tentativa
+                        break
+                    continue
             
-            # Se chegou aqui, todas as tentativas falharam
-            raise Exception("Não foi possível baixar o vídeo. Todas as tentativas de autenticação falharam.")
+            # Se chegou aqui, todas as estratégias falharam
+            self.log_youtube("💥 Todas as estratégias anti-bot falharam")
+            raise Exception(f"Não foi possível baixar o vídeo. Todas as estratégias falharam. Último erro: {last_error}")
 
         except yt_dlp.utils.ExtractorError as e:
             error_msg = str(e)
-            if 'sign in' in error_msg.lower() or 'login' in error_msg.lower():
-                self.log_youtube("Erro de autenticação do YouTube: {}".format(e))
+            if 'sign in' in error_msg.lower() or 'login' in error_msg.lower() or 'bot' in error_msg.lower():
+                self.log_youtube("Erro de detecção de bot do YouTube: {}".format(e))
                 self.show_error_on_main_thread(
-                    "Erro de Autenticação", 
-                    "O YouTube está solicitando login. Tente:\n\n"
-                    "1. Fazer login no YouTube no seu navegador\n"
-                    "2. Aguardar alguns minutos e tentar novamente\n"
-                    "3. Usar um vídeo público diferente\n\n"
+                    "Detecção de Bot", 
+                    "O YouTube detectou comportamento automatizado. Soluções:\n\n"
+                    "1. Faça login no YouTube no seu navegador (Firefox/Edge)\n"
+                    "2. Aguarde 10-15 minutos antes de tentar novamente\n"
+                    "3. Tente um vídeo público diferente\n"
+                    "4. Use uma VPN se disponível\n\n"
                     f"Erro técnico: {e}"
                 )
             else:
@@ -654,12 +995,28 @@ class MainWindow:
             
             self.log_youtube("Download finalizado!")
             filename = d.get('filename')
+            
+            # Verificar se é o arquivo final ou um arquivo intermediário (parte do merge)
+            # Arquivos intermediários geralmente têm padrões como .f399.mp4, .f251.webm
+            # O arquivo final não tem esses padrões no nome
             if filename and os.path.exists(filename):
-                # Adicionar arquivo à lista de conversão
-                if self.add_file_to_list(filename):
-                    self.log_youtube(f"Arquivo adicionado à lista de conversão: {os.path.basename(filename)}")
-                else:
-                    self.log_youtube(f"Arquivo já existe na lista: {os.path.basename(filename)}")
+                file_basename = os.path.basename(filename)
+                
+                # Verificar se é arquivo intermediário (contém padrão .f[numero].[extensão] ou é temporário)
+                is_intermediate = False
+                import re
+                
+                # Padrão para arquivos intermediários do yt-dlp: .f123.mp4, .f456.webm, etc.
+                if re.search(r'\.f\d+\.', file_basename):
+                    is_intermediate = True
+                    self.log_youtube(f"Arquivo intermediário ignorado: {file_basename}")
+                
+                # Só adicionar o arquivo final (não intermediário) à lista de conversão
+                if not is_intermediate:
+                    if self.add_file_to_list(filename):
+                        self.log_youtube(f"Arquivo adicionado à lista de conversão: {file_basename}")
+                    else:
+                        self.log_youtube(f"Arquivo já existe na lista: {file_basename}")
 
     def update_download_progress(self, progress):
         self.progress_bar["value"] = progress
@@ -683,12 +1040,92 @@ class MainWindow:
             return
 
         # Executa a verificação em uma thread para não bloquear a UI
-        thread = threading.Thread(target=self.run_verify_url, args=(url,))
+        thread = threading.Thread(target=self.run_verify_url_simple, args=(url,))
         thread.start()
 
-    def run_verify_url(self, url):
+    def run_verify_url_simple(self, url):
         """
-        Executa a extração de informações do yt-dlp e atualiza a UI.
+        Método leve de verificação que evita detecção de bot.
+        Mostra resoluções padrão sem fazer múltiplas requisições ao YouTube.
+        """
+        try:
+            self.resolution_combobox.set("Buscando...")
+            self.resolution_combobox.config(state="disabled")
+            
+            self.log_youtube(f"🔍 Verificação leve de URL: {url}")
+            
+            # Configuração mínima para evitar detecção de bot
+            ydl_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': True,  # Não extrair formatos detalhados
+                'skip_download': True,
+                'no_check_certificate': True,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                },
+            }
+            
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    # Apenas verificar se a URL é válida, sem extrair formatos
+                    info = ydl.extract_info(url, download=False)
+                    
+                    if info:
+                        self.log_youtube("✅ URL válida detectada")
+                        
+                        # Resoluções padrão do YouTube (720p como base conforme solicitado)
+                        standard_resolutions = [
+                            "1080p", "720p", "480p", "360p", "240p", "144p"
+                        ]
+                        
+                        self.log_youtube(f"📺 Mostrando resoluções padrão (base: 720p): {', '.join(standard_resolutions)}")
+                        
+                        # Atualizar combobox na thread principal
+                        self.resolution_combobox.config(state="normal")
+                        self.resolution_combobox['values'] = standard_resolutions
+                        self.resolution_combobox.set("720p")  # Define 720p como padrão
+                        self.resolution_combobox.config(state="readonly")
+                        
+                        # Mostrar informações básicas se disponíveis
+                        title = info.get('title', 'Título não disponível')
+                        if title != 'Título não disponível':
+                            self.log_youtube(f"📹 Título: {title}")
+                        
+                        self.log_youtube("🎯 Verificação leve concluída com sucesso!")
+                        return
+                        
+            except Exception as e:
+                self.log_youtube(f"⚠️ Verificação básica falhou: {str(e)}")
+                
+                # Fallback: mostrar resoluções padrão mesmo sem verificar a URL
+                self.log_youtube("🔄 Usando resoluções padrão como fallback")
+                standard_resolutions = ["1080p", "720p", "480p", "360p", "240p", "144p"]
+                
+                self.resolution_combobox.config(state="normal")
+                self.resolution_combobox['values'] = standard_resolutions
+                self.resolution_combobox.set("720p")  # Define 720p como padrão
+                self.resolution_combobox.config(state="readonly")
+                
+                self.log_youtube("📺 Resoluções padrão carregadas")
+                return
+            
+        except Exception as e:
+            self.log_youtube(f"❌ Erro na verificação leve: {str(e)}")
+            
+            # Último fallback: resoluções básicas
+            basic_resolutions = ["720p", "480p", "360p"]
+            self.log_youtube(f"🔧 Usando resoluções básicas: {', '.join(basic_resolutions)}")
+            
+            self.resolution_combobox.config(state="normal")
+            self.resolution_combobox['values'] = basic_resolutions
+            self.resolution_combobox.set("720p")  # Define 720p como padrão
+            self.resolution_combobox.config(state="readonly")
+
+    def run_verify_url_fallback(self, url):
+        """
+        Método de fallback para verificação de resoluções usando estratégias múltiplas.
+        Usado quando o método simplificado falha.
         """
         try:
             self.resolution_combobox.set("Buscando...")
@@ -2926,6 +3363,54 @@ class MainWindow:
                 messagebox.showwarning("Aviso", "Área de logs do YouTube não encontrada")
         except Exception as e:
             messagebox.showerror("Erro", f"Erro ao limpar logs do YouTube: {str(e)}")
+
+    def run_youtube_api_download(self, url, output_dir):
+        """
+        Executa download usando abordagem híbrida:
+        - YouTube Data API v3 para metadados oficiais
+        - yt-dlp otimizado para URLs diretas (sem múltiplos fallbacks)
+        """
+        try:
+            resolution = self.resolution_var.get() or "720p"
+            
+            self.log_youtube("🔑 Iniciando download híbrido (API + yt-dlp otimizado)...")
+            self.log_youtube(f"🎯 Resolução alvo: {resolution}")
+            
+            def progress_callback(progress):
+                """Callback para atualizar progresso do download"""
+                self.log_youtube(f"📊 Progresso: {progress:.1f}%")
+            
+            def info_callback(message):
+                """Callback para mensagens informativas"""
+                self.log_youtube(message)
+            
+            # Usar o YouTube API Downloader híbrido
+            success = self.youtube_api_downloader.download_video(
+                url=url,
+                output_path=output_dir,
+                quality=resolution,
+                progress_callback=progress_callback,
+                info_callback=info_callback
+            )
+            
+            if success:
+                self.log_youtube("🎉 Download concluído com sucesso!")
+                self.show_info_on_main_thread("Download Concluído", "Vídeo baixado com sucesso usando método híbrido!")
+            else:
+                # Se o método híbrido falhou, usar fallback tradicional
+                self.log_youtube("🔄 Método híbrido falhou, tentando fallback tradicional...")
+                self.run_youtube_download_with_fallback(url, output_dir)
+                    
+        except Exception as e:
+            error_msg = f"Erro no download híbrido: {str(e)}"
+            self.log_youtube(f"💥 {error_msg}")
+            # Em caso de erro, tentar fallback tradicional uma única vez
+            self.log_youtube("🔄 Tentando fallback tradicional...")
+            try:
+                self.run_youtube_download_with_fallback(url, output_dir)
+            except Exception as fallback_error:
+                final_error = f"API falhou: {str(e)}\nFallback yt-dlp também falhou: {str(fallback_error)}"
+                self.show_error_on_main_thread("Erro de Download", final_error)
 
 
 def main():

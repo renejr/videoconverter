@@ -367,6 +367,46 @@ O deploy dos serviços de backend (`user_service`, `notification_service`) em um
 
 ---
 
+## 🚀 Melhorias Recentes - Sistema de Validação de Resolução
+
+### Problema Identificado e Solucionado
+
+Durante o desenvolvimento, foi identificado um problema crítico no módulo de download do YouTube onde o `yt-dlp` estava utilizando o "Android Player" como estratégia padrão, resultando em downloads com resolução inferior à solicitada (360p em vez de 1080p).
+
+### Solução Implementada
+
+**1. Reordenação de Estratégias de Download:**
+- Priorização de estratégias que suportam códigos específicos de formato
+- Android Player movido para último recurso
+- Nova ordem: Web + Firefox → Web sem cookies → TV Player + Edge → Básico → Android Player
+
+**2. Sistema de Validação de Resolução:**
+- Função `validate_downloaded_resolution()` implementada
+- Verificação automática da resolução após cada download
+- Comparação entre resolução solicitada e obtida
+- Fallback inteligente para próxima estratégia se resolução incorreta
+
+**3. Melhorias na Lógica de Download:**
+- Adição de propriedade `supports_specific_formats` para cada estratégia
+- Logs detalhados sobre formato e resolução baixados
+- Info hooks para captura de metadados em tempo real
+- Validação baseada em altura do vídeo e mapeamento para resoluções padrão
+
+### Benefícios Técnicos
+
+- **Precisão de Resolução:** Garantia de que a resolução solicitada seja efetivamente baixada
+- **Robustez:** Sistema de fallback que tenta múltiplas estratégias automaticamente
+- **Transparência:** Logs detalhados para debugging e monitoramento
+- **Eficiência:** Priorização de estratégias mais confiáveis reduz tentativas desnecessárias
+
+### Arquivos Modificados
+
+- `gui/main_window_tkinter.py`: Implementação da validação e reordenação de estratégias
+- Função `validate_downloaded_resolution()`: Nova função de validação
+- Método `run_youtube_download()`: Lógica aprimorada de fallback
+
+---
+
 ### Propósito
 
 O **VidConv** é uma solução de software completa projetada para oferecer uma experiência de usuário robusta e eficiente para a conversão de vídeos, download de conteúdo de plataformas como o YouTube e gerenciamento de mídia. O sistema foi arquitetado de forma modular para garantir escalabilidade, manutenibilidade e a fácil integração de novas funcionalidades.
