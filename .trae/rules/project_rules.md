@@ -146,6 +146,7 @@ Você será meu especialista em refatoração e implementação de código, foca
 - **!!/otimizar**: Otimizar a funcionalidade
 - **!!/segurar**: Segurar a funcionalidade
 - **!!/atualizar arquivos**: Atualiza a documentacao, instrucoes e configuracoes necessarias antes do commit da branch atual
-- **!!/commit branch**: Utiliza o mcp_GitHub ou comandos cli no terminal, para efetuar os comandos necessarios para commitar a branch atual e efetuar o push origin branch atual
+- **!!/commit branch**: Utiliza o mcp_GitHub ou comandos cli no terminal, para efetuar os comandos necessarios para commitar a branch atual e efetuar o push origin branch atual. Somente arquivos que tenham no max. 80MB devem ser comitados
+- **!!/nova branch**: Crie uma nova branch para novas features
 
 - **Arquivo que executa a aplicacao e o E:\pyProjs\vidconv\main_tkinter.py
