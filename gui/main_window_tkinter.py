@@ -1973,11 +1973,17 @@ class MainWindow:
         header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
         header_frame.columnconfigure(0, weight=1)
 
+        # Botão de limpar logs de conversão
+        self.clear_log_btn = ttk.Button(
+            header_frame, text="🗑️Limpar", command=self.clear_conversion_logs, width=12
+        )
+        self.clear_log_btn.grid(row=0, column=1, sticky=tk.E, padx=(0, 5))
+
         # Botão de salvar log com ícone de disquete
         self.save_log_btn = ttk.Button(
             header_frame, text="💾 Salvar Log", command=self.save_log_manually, width=12
         )
-        self.save_log_btn.grid(row=0, column=1, sticky=tk.E)
+        self.save_log_btn.grid(row=0, column=2, sticky=tk.E)
 
         # Área de texto para logs com scroll
         self.log_text = scrolledtext.ScrolledText(
@@ -2008,14 +2014,14 @@ class MainWindow:
         youtube_header_frame.columnconfigure(0, weight=1)
 
         # Botão de limpar logs do YouTube
-        self.clear_youtube_log_btn = ttk.Button(
-            youtube_header_frame, text="🗑️ Limpar Tudo", command=self.clear_youtube_logs, width=12
+        self.clear_youtube_log_btn = tk.Button(
+            youtube_header_frame, text="🗑️Limpar", command=self.clear_youtube_logs, width=12
         )
-        self.clear_youtube_log_btn.grid(row=0, column=1, sticky=tk.E, padx=(0, 5))
+        self.clear_youtube_log_btn.grid(row=0, column=1, sticky=tk.E, padx=(0, 3))
 
         # Botão de salvar log do YouTube
         self.save_youtube_log_btn = ttk.Button(
-            youtube_header_frame, text="💾 Salvar Log YouTube", command=self.save_youtube_log_manually, width=18
+            youtube_header_frame, text="💾 Salvar Log", command=self.save_youtube_log_manually, width=18
         )
         self.save_youtube_log_btn.grid(row=0, column=2, sticky=tk.E)
 

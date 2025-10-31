@@ -659,25 +659,44 @@ Se o instalador automático falhar ou você usar instalação manual:
 - **Fallback automático CPU quando CUDA não disponível**
 - **Otimizações de performance para conversão**
 
-## 🎯 Melhorias Recentes - Sistema de Validação de Resolução
+## 🎯 Melhorias Recentes
 
-### Problema Resolvido
+### 🔧 Correções do Executável PyInstaller (v1.0.1)
+
+#### Problema Resolvido
+O executável gerado pelo PyInstaller apresentava erro `ModuleNotFoundError: No module named 'version'` devido à não inclusão de módulos locais do projeto.
+
+#### Solução Implementada
+- **Inclusão de Módulos Locais**: Adicionado `version.py` à seção `datas` do arquivo `.spec`
+- **Hiddenimports Completos**: Incluídos todos os módulos necessários (`platform`, `psutil`, `GPUtil`, `pynvml`, `wmi`, `PIL`, `cv2`, `numpy`, `webview`, `rich`, `jinja2`, `fastapi`, `sqlalchemy`, etc.)
+- **Build Otimizado**: Executável final com 102MB incluindo todas as dependências
+- **Testes Validados**: Executável funcionando perfeitamente sem erros de importação
+
+#### Benefícios
+- ✅ Executável standalone funcional
+- ✅ Todas as dependências incluídas
+- ✅ Sem erros de módulos faltantes
+- ✅ Pronto para distribuição
+
+### 🎯 Sistema de Validação de Resolução
+
+#### Problema Resolvido
 O sistema anteriormente baixava vídeos em resolução incorreta (360p) quando solicitado 1080p, devido ao uso prioritário da estratégia "Android Player" que não suporta códigos específicos de formato.
 
-### Solução Implementada
+#### Solução Implementada
 - **Reordenação Inteligente de Estratégias**: Priorização de estratégias que suportam códigos específicos
 - **Sistema de Validação**: Verificação automática da resolução baixada vs. solicitada
 - **Fallback Automático**: Tentativa da próxima estratégia se a resolução estiver incorreta
 - **Logs Detalhados**: Rastreamento completo do processo de download e validação
 
-### Estratégias de Download (Nova Ordem)
+#### Estratégias de Download (Nova Ordem)
 1. **Web + Firefox** - Suporte completo a códigos específicos
 2. **Web sem cookies** - Alternativa robusta
 3. **TV Player + Edge** - Para conteúdo restrito
 4. **Básico** - Estratégia padrão
 5. **Android Player** - Último recurso (limitações de formato)
 
-### Benefícios
+#### Benefícios
 - ✅ Garantia de resolução correta
 - ✅ Maior taxa de sucesso em downloads
 - ✅ Melhor experiência do usuário
