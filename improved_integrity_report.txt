@@ -1,0 +1,302 @@
+{
+  "timestamp": "2025-11-09T22:45:00.589606",
+  "project_root": "E:\\pyProjs\\vidconv",
+  "files_checked": 4,
+  "files_with_issues": 2,
+  "total_issues": 31,
+  "files": {
+    "video_converter_module/core/queue_manager.py": {
+      "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+      "timestamp": "2025-11-09T22:45:00.590080",
+      "issues": {
+        "duplicate_methods": [],
+        "duplicate_imports": [
+          {
+            "import": "import psutil",
+            "first_occurrence": 87,
+            "duplicate_line": 476,
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "type": "exact_duplicate"
+          },
+          {
+            "import": "import psutil",
+            "first_occurrence": 87,
+            "duplicate_line": 622,
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "type": "exact_duplicate"
+          },
+          {
+            "import": "import time",
+            "first_occurrence": 8,
+            "duplicate_line": 623,
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "type": "exact_duplicate"
+          },
+          {
+            "import": "import time",
+            "first_occurrence": 8,
+            "duplicate_line": 688,
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "type": "exact_duplicate"
+          },
+          {
+            "import": "import time",
+            "first_occurrence": 8,
+            "duplicate_line": 713,
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "type": "exact_duplicate"
+          },
+          {
+            "import": "import psutil",
+            "first_occurrence": 87,
+            "duplicate_line": 1204,
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "type": "exact_duplicate"
+          },
+          {
+            "import": "import psutil",
+            "first_occurrence": 87,
+            "duplicate_line": 927,
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "type": "exact_duplicate"
+          }
+        ],
+        "duplicate_blocks": [
+          {
+            "block_start_1": 277,
+            "block_start_2": 341,
+            "block_size": 10,
+            "content_preview": "\"prefer_intel_for_h264\": intel_gpu is not None,\n\"auto_gpu_switching\": True,\n\"temperature_monitoring\"...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "hash": "90ea6893e99f28700765451572a318bb"
+          },
+          {
+            "block_start_1": 278,
+            "block_start_2": 342,
+            "block_size": 10,
+            "content_preview": "\"auto_gpu_switching\": True,\n\"temperature_monitoring\": True,\n\"max_temperature_celsius\": 85,\n}\nreturn ...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "hash": "6c954f4f04f803d8226ed75082e48b02"
+          },
+          {
+            "block_start_1": 279,
+            "block_start_2": 343,
+            "block_size": 10,
+            "content_preview": "\"temperature_monitoring\": True,\n\"max_temperature_celsius\": 85,\n}\nreturn HardwareProfile(\nprofile_typ...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "hash": "9fe446a6f61ec018139c37c034398f5b"
+          },
+          {
+            "block_start_1": 280,
+            "block_start_2": 344,
+            "block_size": 10,
+            "content_preview": "\"max_temperature_celsius\": 85,\n}\nreturn HardwareProfile(\nprofile_type=profile_type,\nmax_concurrent_j...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/queue_manager.py",
+            "hash": "644805a37de9dbfc6eebbfbc0e987118"
+          }
+        ],
+        "syntax_errors": []
+      },
+      "status": "issues_found"
+    },
+    "video_converter_module/core/video_converter.py": {
+      "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+      "timestamp": "2025-11-09T22:45:00.941551",
+      "issues": {
+        "duplicate_methods": [],
+        "duplicate_imports": [
+          {
+            "import": "import threading",
+            "first_occurrence": 8,
+            "duplicate_line": 1423,
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "type": "exact_duplicate"
+          },
+          {
+            "import": "import time",
+            "first_occurrence": 9,
+            "duplicate_line": 1424,
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "type": "exact_duplicate"
+          }
+        ],
+        "duplicate_blocks": [
+          {
+            "block_start_1": 1212,
+            "block_start_2": 1327,
+            "block_size": 10,
+            "content_preview": "self.monitor_progress(total_duration)\nwhile self.process.poll() is None and not self.cancelled:\ntime...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "e8a41e0f98e67f05505f78a1969c5b94"
+          },
+          {
+            "block_start_1": 1212,
+            "block_start_2": 1327,
+            "block_size": 10,
+            "content_preview": "self.monitor_progress(total_duration)\nwhile self.process.poll() is None and not self.cancelled:\ntime...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "e8a41e0f98e67f05505f78a1969c5b94"
+          },
+          {
+            "block_start_1": 1212,
+            "block_start_2": 1327,
+            "block_size": 10,
+            "content_preview": "self.monitor_progress(total_duration)\nwhile self.process.poll() is None and not self.cancelled:\ntime...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "e8a41e0f98e67f05505f78a1969c5b94"
+          },
+          {
+            "block_start_1": 1215,
+            "block_start_2": 1330,
+            "block_size": 10,
+            "content_preview": "while self.process.poll() is None and not self.cancelled:\ntime.sleep(0.1)\nstdout = \"\"\nstderr = \"\"\nif...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "d5d15ad58adebacd3f7385b6ab325662"
+          },
+          {
+            "block_start_1": 1215,
+            "block_start_2": 1330,
+            "block_size": 10,
+            "content_preview": "while self.process.poll() is None and not self.cancelled:\ntime.sleep(0.1)\nstdout = \"\"\nstderr = \"\"\nif...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "d5d15ad58adebacd3f7385b6ab325662"
+          },
+          {
+            "block_start_1": 1215,
+            "block_start_2": 1330,
+            "block_size": 10,
+            "content_preview": "while self.process.poll() is None and not self.cancelled:\ntime.sleep(0.1)\nstdout = \"\"\nstderr = \"\"\nif...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "d5d15ad58adebacd3f7385b6ab325662"
+          },
+          {
+            "block_start_1": 1216,
+            "block_start_2": 1331,
+            "block_size": 10,
+            "content_preview": "time.sleep(0.1)\nstdout = \"\"\nstderr = \"\"\nif self.process.stdout:\ntry:\nstdout = self.process.stdout.re...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "153a0ecfec71d5d7c5cfbbfd3cfb449d"
+          },
+          {
+            "block_start_1": 1219,
+            "block_start_2": 1334,
+            "block_size": 10,
+            "content_preview": "stdout = \"\"\nstderr = \"\"\nif self.process.stdout:\ntry:\nstdout = self.process.stdout.read()\nexcept:\npas...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "eb01798150b297307a54f396f034e2a9"
+          },
+          {
+            "block_start_1": 1219,
+            "block_start_2": 1334,
+            "block_size": 10,
+            "content_preview": "stdout = \"\"\nstderr = \"\"\nif self.process.stdout:\ntry:\nstdout = self.process.stdout.read()\nexcept:\npas...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "eb01798150b297307a54f396f034e2a9"
+          },
+          {
+            "block_start_1": 1219,
+            "block_start_2": 1334,
+            "block_size": 10,
+            "content_preview": "stdout = \"\"\nstderr = \"\"\nif self.process.stdout:\ntry:\nstdout = self.process.stdout.read()\nexcept:\npas...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "eb01798150b297307a54f396f034e2a9"
+          },
+          {
+            "block_start_1": 1220,
+            "block_start_2": 1335,
+            "block_size": 10,
+            "content_preview": "stderr = \"\"\nif self.process.stdout:\ntry:\nstdout = self.process.stdout.read()\nexcept:\npass\nif self.pr...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "eeae21472130715e07650e4a455a56a1"
+          },
+          {
+            "block_start_1": 1221,
+            "block_start_2": 1336,
+            "block_size": 10,
+            "content_preview": "if self.process.stdout:\ntry:\nstdout = self.process.stdout.read()\nexcept:\npass\nif self.process.stderr...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "af467f5be2552b79744b4f5b02054c3e"
+          },
+          {
+            "block_start_1": 1222,
+            "block_start_2": 1337,
+            "block_size": 10,
+            "content_preview": "try:\nstdout = self.process.stdout.read()\nexcept:\npass\nif self.process.stderr:\ntry:\nstderr = self.pro...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "7285b38f7dbd848a6136fb5d6888ade0"
+          },
+          {
+            "block_start_1": 1223,
+            "block_start_2": 1338,
+            "block_size": 10,
+            "content_preview": "stdout = self.process.stdout.read()\nexcept:\npass\nif self.process.stderr:\ntry:\nstderr = self.process....",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "e5af9c8fb8b57d4e7b6f45b0248a29f1"
+          },
+          {
+            "block_start_1": 1224,
+            "block_start_2": 1339,
+            "block_size": 10,
+            "content_preview": "except:\npass\nif self.process.stderr:\ntry:\nstderr = self.process.stderr.read()\nexcept:\npass\nif self.c...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "fbcf6ce20abd721a5809b5db3f3ab987"
+          },
+          {
+            "block_start_1": 1225,
+            "block_start_2": 1340,
+            "block_size": 10,
+            "content_preview": "pass\nif self.process.stderr:\ntry:\nstderr = self.process.stderr.read()\nexcept:\npass\nif self.cancelled...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "f4ffb42a6b2fe73d09177dbe630afba8"
+          },
+          {
+            "block_start_1": 1226,
+            "block_start_2": 1341,
+            "block_size": 10,
+            "content_preview": "if self.process.stderr:\ntry:\nstderr = self.process.stderr.read()\nexcept:\npass\nif self.cancelled:\nsel...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "60b06f62f12364e3f2c44ea11d68cc64"
+          },
+          {
+            "block_start_1": 1227,
+            "block_start_2": 1342,
+            "block_size": 10,
+            "content_preview": "try:\nstderr = self.process.stderr.read()\nexcept:\npass\nif self.cancelled:\nself._call_callback(\n\"finis...",
+            "file": "E:\\pyProjs\\vidconv\\video_converter_module/core/video_converter.py",
+            "hash": "094fff58f67dd77d36b2578b3039ceec"
+          }
+        ],
+        "syntax_errors": []
+      },
+      "status": "issues_found"
+    },
+    "main_tkinter.py": {
+      "file": "E:\\pyProjs\\vidconv\\main_tkinter.py",
+      "timestamp": "2025-11-09T22:45:01.349736",
+      "issues": {
+        "duplicate_methods": [],
+        "duplicate_imports": [],
+        "duplicate_blocks": [],
+        "syntax_errors": []
+      },
+      "status": "ok"
+    },
+    "video_converter_module/utils/hardware_detector.py": {
+      "file": "E:\\pyProjs\\vidconv\\video_converter_module/utils/hardware_detector.py",
+      "timestamp": "2025-11-09T22:45:01.353310",
+      "issues": {
+        "duplicate_methods": [],
+        "duplicate_imports": [],
+        "duplicate_blocks": [],
+        "syntax_errors": []
+      },
+      "status": "ok"
+    }
+  },
+  "summary": {
+    "duplicate_methods": 0,
+    "duplicate_imports": 9,
+    "duplicate_blocks": 22,
+    "syntax_errors": 0
+  }
+}

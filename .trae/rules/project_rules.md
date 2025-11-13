@@ -149,4 +149,62 @@ Você será meu especialista em refatoração e implementação de código, foca
 - **!!/commit branch**: Utiliza o mcp_GitHub ou comandos cli no terminal, para efetuar os comandos necessarios para commitar a branch atual e efetuar o push origin branch atual. Somente arquivos que tenham no max. 80MB devem ser comitados
 - **!!/nova branch**: Crie uma nova branch para novas features
 
+### Sistema de Salvaguardas de Código
+
+#### Regras de Proteção Obrigatórias
+- **OBRIGATÓRIO**: Executar verificação de integridade antes de qualquer modificação importante
+- **OBRIGATÓRIO**: Criar backups automáticos de arquivos críticos antes de modificações
+- **OBRIGATÓRIO**: Verificar sintaxe Python após cada modificação
+- **OBRIGATÓRIO**: Detectar e prevenir duplicações de código (métodos, imports, blocos)
+- **OBRIGATÓRIO**: Reverter automaticamente modificações que causem erros de sintaxe
+
+#### Ferramentas de Salvaguarda Disponíveis
+1. **Verificador de Integridade** (`utils/code_integrity_checker.py`)
+   - Detecta métodos duplicados
+   - Detecta imports duplicados  
+   - Detecta blocos de código duplicados
+   - Verifica erros de sintaxe
+   - Gera relatórios de integridade
+
+2. **Modificador Seguro** (`utils/safe_code_modifier.py`)
+   - Cria backups temporários antes de modificações
+   - Verifica segurança pós-modificação
+   - Reverte automaticamente em caso de problemas
+   - Registra todas as modificações
+
+3. **Verificação Rápida** (`check_integrity.py`)
+   - Verifica arquivos críticos antes de modificações
+   - Cria backups de segurança
+   - Bloqueia modificações se houver problemas
+
+4. **Corretor Automático** (`fix_duplications.py`)
+   - Corrige automaticamente duplicações seguras
+   - Usa o modificador seguro para aplicar correções
+   - Gera relatório pós-correção
+
+#### Protocolo de Emergência
+Quando o "Model thinking limit" for atingido ou houver risco de corrupção:
+
+1. **Parar Imediatamente** todas as modificações
+2. **Executar** `python check_integrity.py` para verificar integridade
+3. **Revisar** relatório de integridade gerado
+4. **Corrigir** problemas encontrados antes de continuar
+5. **Criar Backup** manual se necessário
+6. **Reiniciar** processo com verificações ativas
+
+#### Locais de Backup
+- **Backups Temporários**: `.integrity_backups/`
+- **Relatórios**: Salvos automaticamente com timestamp
+- **Logs de Modificação**: Registrados pelo SafeCodeModifier
+
+#### Configurações de Segurança
+- **Arquivos Críticos Monitorados**: 
+  - `queue_manager.py`
+  - `video_converter.py` 
+  - `main_tkinter.py`
+  - Todos os arquivos em `video_converter_module/core/`
+- **Verificações Automáticas**: Ativadas por padrão
+- **Reversão Automática**: Ativada para erros de sintaxe
+- **Limite de Tentativas**: 3 tentativas antes de bloqueio
+
 - **Arquivo que executa a aplicacao e o E:\pyProjs\vidconv\main_tkinter.py

@@ -1,0 +1,55 @@
+{
+  "hardware_capabilities": {
+    "profile": "mid_range",
+    "gpu_count": 1,
+    "total_vram_mb": 4096,
+    "system_ram_gb": 7.911949157714844,
+    "cuda_available": true
+  },
+  "adaptive_settings": {
+    "profile_name": "adaptive_mid_range",
+    "hardware_profile": "mid_range",
+    "timestamp": 1761943093.2214894,
+    "use_hardware_acceleration": true,
+    "preferred_gpu_index": 0,
+    "preferred_encoder": "h264_nvenc",
+    "preferred_decoder": "h264_cuvid",
+    "max_memory_usage": 0.75,
+    "prealloc_size": "256M",
+    "max_alloc_size": "1G",
+    "max_concurrent_streams": 4,
+    "enable_memory_pool": true,
+    "max_concurrent_jobs": 1,
+    "preset": "medium",
+    "cq": 25,
+    "crf": null,
+    "rc_mode": "vbr",
+    "surfaces": 16,
+    "async_depth": 8,
+    "rc_lookahead": 32,
+    "multipass": null,
+    "spatial_aq": true,
+    "temporal_aq": true,
+    "aq_strength": 8,
+    "fallback_to_cpu": true,
+    "cpu_threads": 8,
+    "enable_monitoring": true,
+    "monitoring_interval": 30,
+    "auto_adjust": true
+  },
+  "user_preferences": {
+    "global": {
+      "preferred_encoder": "h264_nvenc"
+    },
+    "mid_range": {
+      "preset": "medium"
+    }
+  },
+  "performance_recommendations": [
+    {
+      "type": "tip",
+      "category": "utilization",
+      "message": "GPU subutilizada - considere aumentar concurrent jobs"
+    }
+  ]
+}

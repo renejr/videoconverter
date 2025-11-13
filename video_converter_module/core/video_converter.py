@@ -34,6 +34,8 @@ from utils.config import (
     AUDIO_CODEC_CONFIG,
     AUDIO_EXTRACTION_DEFAULTS,
 )
+from utils.universal_hardware_manager import UniversalHardwareManager
+from utils.hardware_integration import HardwareIntegration
 from utils.validators import (
     validate_input_file,
     validate_output_directory,
@@ -41,6 +43,7 @@ from utils.validators import (
     generate_output_filename,
 )
 from .ffmpeg_installer import FFmpegInstaller
+from .video_converter_manager import VideoConverterManager
 
 
 class VideoConverter(threading.Thread):
@@ -59,7 +62,11 @@ class VideoConverter(threading.Thread):
         self.callbacks = {}
         self.monitor_threads = {'stdout': None, 'stderr': None}
 
-        # Configuração de hardware
+        # Sistema Universal de Hardware
+        self.hardware_manager = UniversalHardwareManager()
+        self.hardware_integration = HardwareIntegration()
+        
+        # Configuração de hardware (compatibilidade com código antigo)
         self.hardware_config_obj = get_hardware_config()
         self.hardware_config = self.hardware_config_obj.auto_configure()
         self.hw_settings = self.hardware_config.get("hardware_acceleration", {})
@@ -67,6 +74,14 @@ class VideoConverter(threading.Thread):
             "enabled", False
         )
         self.cuda_fallback_attempted = False
+        
+        # Inicializar sistema universal
+        try:
+            self.hardware_manager.initialize()
+            self._call_callback("log", f"Sistema universal de hardware inicializado: {self.hardware_manager.get_hardware_status()}")
+        except Exception as e:
+            self._call_callback("log", f"Erro ao inicializar sistema universal: {e}")
+            self._call_callback("log", "Usando sistema de hardware legado")
 
     def set_conversion_parameters(
         self, input_file, output_file, settings, callbacks=None
@@ -152,31 +167,18 @@ class VideoConverter(threading.Thread):
             self._call_callback("log", f"Comando FFprobe: {' '.join(cmd)}")
             self._call_callback("log", f"Diretório de trabalho: {os.getcwd()}")
 
-            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=30)
+            result = self._run_subprocess_with_logging(cmd, timeout=30, context="FFprobe")
 
-            # Log detalhado da execução
-            self._call_callback("log", f"FFprobe returncode: {result.returncode}")
-            if result.stdout:
-                self._call_callback("log", f"FFprobe stdout: {result.stdout[:200]}...")
-            if result.stderr:
-                self._call_callback("log", f"FFprobe stderr: {result.stderr}")
-
-            if result.returncode == 0:
+            if result and result.returncode == 0:
                 import json
 
                 info = json.loads(result.stdout)
                 return self.parse_video_info(info)
-            else:
+            elif result:
                 self._call_callback(
                     "log",
                     f"FFprobe falhou com código {result.returncode}: {result.stderr}",
                 )
-        except subprocess.TimeoutExpired:
-            self._call_callback(
-                "log", "FFprobe timeout - comando demorou mais de 30 segundos"
-            )
-        except FileNotFoundError as e:
-            self._call_callback("log", f"FFprobe não encontrado: {str(e)}")
         except Exception as e:
             self._call_callback("log", f"Erro ao obter informações do vídeo: {str(e)}")
             self._call_callback("log", f"Tipo do erro: {type(e).__name__}")
@@ -264,16 +266,11 @@ class VideoConverter(threading.Thread):
                 file_path
             ]
 
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=30
-            )
+            result = self._run_subprocess_with_logging(cmd, timeout=30, context="FFprobe-audio")
 
             # Se encontrou stream de áudio, retorna True
             return result.returncode == 0 and "audio" in result.stdout.lower()
 
-        except subprocess.TimeoutExpired:
-            self._call_callback("log", "Timeout ao verificar streams de áudio")
-            return False
         except Exception as e:
             self._call_callback("log", f"Erro ao verificar streams de áudio: {str(e)}")
             return False
@@ -336,28 +333,10 @@ class VideoConverter(threading.Thread):
         gif_settings = settings.get("gif_settings", {})
 
         # LOG DETALHADO: Diagnóstico de processamento de GIF
-        self._call_callback(
-            "log", "🔍 DIAGNÓSTICO GIF: Iniciando construção do comando"
-        )
-        self._call_callback("log", f"🔍 Configurações GIF: {gif_settings}")
-        self._call_callback("log", f"🔍 Arquivo de entrada: {self.input_file}")
+        self._log_operation_start("GIF", gif_settings)
 
-        # Verificar se arquivo de entrada existe e tamanho
-        if os.path.exists(self.input_file):
-            file_size = os.path.getsize(self.input_file) / (1024 * 1024)  # MB
-            self._call_callback(
-                "log", f"🔍 Tamanho do arquivo de entrada: {file_size:.1f} MB"
-            )
-            if file_size > 100:  # Arquivos maiores que 100MB podem causar problemas
-                self._call_callback(
-                    "log",
-                    "🚨 AVISO: Arquivo grande detectado - pode causar alto consumo de memória",
-                )
-        else:
-            self._call_callback("log", "🚨 ERRO: Arquivo de entrada não encontrado!")
-
-        # Arquivo de entrada
-        cmd.extend(["-i", self.input_file])
+        # Preparar entrada e diagnósticos básicos
+        self._prepare_input_and_basic_diagnostics(cmd, "GIF")
 
         # Configurações de FPS
         gif_fps = gif_settings.get("fps", "15")
@@ -417,7 +396,7 @@ class VideoConverter(threading.Thread):
             cmd.extend(["-loop", "0"])  # Loop infinito
 
         # Configurações gerais
-        cmd.extend(["-y"])  # Sobrescrever arquivo de saída
+        self._append_overwrite_flag(cmd)
 
         # CORREÇÃO CRÍTICA: Limpar nome do arquivo de saída para GIF
         # Remover caracteres problemáticos que causam erro no FFmpeg
@@ -455,47 +434,38 @@ class VideoConverter(threading.Thread):
         frame_settings = settings.get("frame_settings", {})
 
         # LOG DETALHADO: Diagnóstico de extração de frames
-        self._call_callback(
-            "log", "🔍 DIAGNÓSTICO FRAMES: Iniciando construção do comando"
-        )
-        self._call_callback("log", f"🔍 Configurações de frames: {frame_settings}")
-        self._call_callback("log", f"🔍 Arquivo de entrada: {self.input_file}")
+        self._log_operation_start("FRAMES", frame_settings)
 
-        # Verificar se arquivo de entrada existe e obter informações básicas
-        if os.path.exists(self.input_file):
-            file_size = os.path.getsize(self.input_file) / (1024 * 1024)  # MB
-            self._call_callback(
-                "log", f"🔍 Tamanho do arquivo de entrada: {file_size:.1f} MB"
-            )
+        # Preparar entrada e diagnósticos básicos
+        self._prepare_input_and_basic_diagnostics(cmd, "Frames")
 
-            # Obter informações do vídeo para estimar quantidade de frames
+        # Obter informações do vídeo para estimar quantidade de frames
+        try:
             video_info = self.get_video_info(self.input_file)
-            if video_info:
-                duration = video_info.get("duration", 0)
-                fps = video_info.get("fps", 0)
-                if duration and fps:
-                    estimated_frames = int(duration * fps)
+        except Exception as e:
+            video_info = None
+            self._call_callback("log", f"Erro ao obter informações do vídeo: {e}")
+        if video_info:
+            duration = video_info.get("duration", 0)
+            fps = video_info.get("fps", 0)
+            if duration and fps:
+                estimated_frames = int(duration * fps)
+                self._call_callback(
+                    "log",
+                    f"🔍 Duração: {duration:.1f}s, FPS: {fps}, Frames estimados: {estimated_frames}",
+                )
+
+                # Avisos para operações potencialmente problemáticas
+                if estimated_frames > 10000:  # Mais de 10k frames
                     self._call_callback(
                         "log",
-                        f"🔍 Duração: {duration:.1f}s, FPS: {fps}, Frames estimados: {estimated_frames}",
+                        "🚨 AVISO: Muitos frames estimados - pode causar alto consumo de disco e memória",
                     )
-
-                    # Avisos para operações potencialmente problemáticas
-                    if estimated_frames > 10000:  # Mais de 10k frames
-                        self._call_callback(
-                            "log",
-                            "🚨 AVISO: Muitos frames estimados - pode causar alto consumo de disco e memória",
-                        )
-                    if duration > 300:  # Vídeos muito longos
-                        self._call_callback(
-                            "log",
-                            "🚨 AVISO: Vídeo muito longo - operação pode demorar muito tempo",
-                        )
-        else:
-            self._call_callback("log", "🚨 ERRO: Arquivo de entrada não encontrado!")
-
-        # Arquivo de entrada
-        cmd.extend(["-i", self.input_file])
+                if duration > 300:  # Vídeos muito longos
+                    self._call_callback(
+                        "log",
+                        "🚨 AVISO: Vídeo muito longo - operação pode demorar muito tempo",
+                    )
 
         # Configurações do formato de saída
         frame_format = frame_settings.get("format", "JPG")
@@ -533,8 +503,7 @@ class VideoConverter(threading.Thread):
         elif frame_format == "WebP":
             cmd.extend(["-quality", str(quality)])
             # Suporte a transparência para WebP
-            if settings.get("transparency", False):
-                cmd.extend(["-pix_fmt", "yuva420p"])
+            self._apply_transparency_if_supported(cmd, "WebP", settings)
         elif frame_format == "TIFF":
             cmd.extend(["-compression_algo", "lzw"])  # Compressão LZW para TIFF
 
@@ -542,20 +511,15 @@ class VideoConverter(threading.Thread):
         output_dir = os.path.dirname(self.output_file)
         video_name = os.path.splitext(os.path.basename(self.input_file))[0]
 
-        # Criar pasta automática se configurado
-        if frame_settings.get("auto_folder", True):
-            frame_folder = os.path.join(output_dir, f"{video_name}_frames")
-            os.makedirs(frame_folder, exist_ok=True)
-            output_pattern = os.path.join(
-                frame_folder, f"{video_name}_frame_%04d.{frame_format.lower()}"
-            )
-        else:
-            output_pattern = os.path.join(
-                output_dir, f"{video_name}_frame_%04d.{frame_format.lower()}"
-            )
+        output_pattern = self._prepare_frame_output_pattern(
+            output_dir=output_dir,
+            video_name=video_name,
+            frame_format=frame_format,
+            auto_folder=frame_settings.get("auto_folder", True),
+        )
 
         # Configurações gerais
-        cmd.extend(["-y"])  # Sobrescrever arquivos de saída
+        self._append_overwrite_flag(cmd)
 
         # Padrão de saída
         cmd.append(output_pattern)
@@ -590,8 +554,8 @@ class VideoConverter(threading.Thread):
         codec_config = AUDIO_CODEC_CONFIG.get(audio_format, AUDIO_CODEC_CONFIG["MP3"])
         quality_presets = AUDIO_QUALITY_PRESETS.get(audio_format, AUDIO_QUALITY_PRESETS["MP3"])
         
-        # Arquivo de entrada
-        cmd.extend(["-i", self.input_file])
+        # Arquivo de entrada com diagnósticos básicos
+        self._prepare_input_and_basic_diagnostics(cmd, "Áudio")
         
         # Desabilitar vídeo (apenas áudio)
         cmd.extend(["-vn"])
@@ -623,7 +587,7 @@ class VideoConverter(threading.Thread):
             cmd.extend(["-map_metadata", "0"])
         
         # Configurações gerais
-        cmd.extend(["-y"])  # Sobrescrever arquivo de saída
+        self._append_overwrite_flag(cmd)
         
         # Arquivo de saída
         cmd.append(self.output_file)
@@ -639,20 +603,20 @@ class VideoConverter(threading.Thread):
         Args:
             cmd: Lista do comando FFmpeg
         """
-        if not self.cuda_available or self.cuda_fallback_attempted:
-            return
+        try:
+            settings = self.conversion_settings
+            use_hardware = settings.get("use_hardware_acceleration", True)
+            performance_config = settings.get("performance_config", {})
 
-        settings = self.conversion_settings
-        use_hardware = settings.get("use_hardware_acceleration", True)
+            use_cuda, device_index = self._decide_gpu_usage("video_decoding", use_hardware, performance_config)
 
-        if use_hardware and self.hw_settings.get("enabled", False):
-            # Configurar decodificação CUVID
-            cuda_config = self.hardware_config.get("cuda_config", {})
-            gpu_index = cuda_config.get("gpu_index", 0)
-
-            cmd.extend(["-hwaccel", "cuda"])
-            cmd.extend(["-hwaccel_device", str(gpu_index)])
-            # Removido -hwaccel_output_format cuda para evitar conflitos de filtros
+            if use_cuda:
+                cmd.extend(["-hwaccel", "cuda"])
+                cmd.extend(["-hwaccel_device", str(device_index)])
+                self._call_callback("log", f"Usando decodificação CUDA na GPU {device_index}")
+                return
+        except Exception as e:
+            self._call_callback("log", f"Erro ao decidir uso de GPU para decodificação: {e}")
 
     def add_video_settings(self, cmd):
         """
@@ -670,93 +634,23 @@ class VideoConverter(threading.Thread):
 
         # Obter configuração do modo de performance
         performance_config = settings.get("performance_config", {})
-        cpu_preference = performance_config.get("cpu_preference", "auto")
-        nvidia_preference = performance_config.get("nvidia_preference", "auto")
 
-        # Determinar se usar CUDA ou CPU baseado no modo de performance
-        if cpu_preference == "force":
-            # Modo Econômico: Forçar CPU sempre
-            use_cuda = False
-        elif nvidia_preference == "force" and self.cuda_available:
-            # Modo Performance: Forçar NVIDIA se disponível
-            use_cuda = not self.cuda_fallback_attempted and self.hw_settings.get(
-                "enabled", False
-            )
-        else:
-            # Modo Automático: Usar lógica original
-            use_cuda = (
-                self.cuda_available
-                and use_hardware
-                and not self.cuda_fallback_attempted
-                and self.hw_settings.get("enabled", False)
-            )
+        # Determinar se usar CUDA ou CPU via helper comum
+        use_cuda, _device_index = self._decide_gpu_usage("video_encoding", use_hardware, performance_config)
 
         # Para AVI, usar configurações específicas otimizadas
         if is_avi_format:
             self.add_avi_video_settings(cmd)
         # Codec de vídeo baseado na seleção do usuário
         else:
-            # Obter codec selecionado pelo usuário (padrão: h264)
             selected_codec = settings.get("codec", "h264")
+            self._apply_encoder_selection(cmd, format_name, selected_codec, use_cuda)
 
-            # Verificar se o formato suporta codecs específicos
-            if (
-                "VP9" in format_name
-                or "WEBM" in format_name.upper()
-                or "WebM" in format_name
-            ):
-                # VP9/WEBM não tem suporte NVENC, usar CPU com VP9
-                self.add_cpu_video_settings(cmd, "vp9")
-                self._call_callback(
-                    "log",
-                    f"🔧 CORREÇÃO WEBM: Usando codec VP9 para formato {format_name}",
-                )
-            elif "WEBP" in format_name:
-                # WebP não tem suporte NVENC, usar CPU
-                self.add_cpu_video_settings(cmd, "webp")
-            else:
-                # Para MP4, MKV e outros formatos, usar codec selecionado
-                if selected_codec == "hevc":  # H.265
-                    if use_cuda:
-                        self.add_cuda_video_settings(cmd, "hevc")
-                    else:
-                        self.add_cpu_video_settings(cmd, "hevc")
-                else:  # H.264 (padrão)
-                    if use_cuda:
-                        self.add_cuda_video_settings(cmd, "h264")
-                    else:
-                        self.add_cpu_video_settings(cmd, "h264")
-
-        # Configurações de FPS
-        fps = settings.get("fps")
-        if fps and fps != "Original":
-            if fps == "Custom":
-                custom_fps = settings.get("custom_fps", 30)
-                cmd.extend(["-r", str(custom_fps)])
-            else:
-                cmd.extend(["-r", str(fps)])
-
-        # Configurações de resolução
-        resolution = settings.get("resolution")
-        if resolution and resolution != "Original":
-            if resolution == "Custom":
-                width = settings.get("custom_width", 1920)
-                height = settings.get("custom_height", 1080)
-                cmd.extend(["-s", f"{width}x{height}"])
-            else:
-                # Usar presets de resolução
-                if resolution in RESOLUTION_PRESETS:
-                    res_value = RESOLUTION_PRESETS[resolution]
-                    if res_value and isinstance(res_value, tuple):
-                        # Converter tupla (width, height) para string "widthxheight"
-                        cmd.extend(["-s", f"{res_value[0]}x{res_value[1]}"])
-                    elif res_value:
-                        cmd.extend(["-s", res_value])
+        # Aplicar FPS e resolução através de helper unificado
+        self._apply_video_scaling_and_fps(cmd, settings)
 
         # Configurações de transparência (para formatos suportados)
-        if settings.get("transparency", False):
-            if "WEBP" in format_name or "WebM" in format_name or "MOV" in format_name:
-                cmd.extend(["-pix_fmt", "yuva420p"])
+        self._apply_transparency_if_supported(cmd, format_name, settings)
 
     def _is_avi_format(self):
         """
@@ -811,8 +705,7 @@ class VideoConverter(threading.Thread):
         cmd.extend(["-tune", avi_preset["tune"]])
 
         # Configurações adicionais para melhor compatibilidade AVI
-        cmd.extend(["-pix_fmt", "yuv420p"])  # Formato de pixel compatível
-        cmd.extend(["-movflags", "+faststart"])  # Otimização para streaming
+        self._apply_common_output_flags(cmd, apply_pix_fmt=True, apply_faststart=True)
 
         self._call_callback(
             "log",
@@ -1150,36 +1043,15 @@ class VideoConverter(threading.Thread):
             self.monitor_progress(total_duration)
 
             # Aguardar conclusão sem bloquear as streams
-            while self.process.poll() is None and not self.cancelled:
-                time.sleep(0.1)
+            self._wait_while_running()
 
-            # Capturar saída final se necessário
-            stdout = ""
-            stderr = ""
-            if self.process.stdout:
-                try:
-                    stdout = self.process.stdout.read()
-                except:
-                    pass
-            if self.process.stderr:
-                try:
-                    stderr = self.process.stderr.read()
-                except:
-                    pass
-
-            if self.cancelled:
-                self._call_callback(
-                    "finished", False, "Conversão cancelada pelo usuário"
-                )
+            # Capturar saída final com helper e tratar cancelamento
+            stdout, stderr = self._read_process_output()
+            if self._check_and_handle_cancel():
                 return
 
             if self.process.returncode == 0:
-                self._call_callback("status", "Conversão concluída com sucesso!")
-                self._call_callback("progress", 100)
-                self._call_callback(
-                    "finished", True, "Conversão concluída com sucesso!"
-                )
-                self._call_callback("log", f"Arquivo salvo em: {self.output_file}")
+                self._finalize_success("Conversão concluída com sucesso!")
             else:
                 # Verificar se é erro relacionado ao CUDA e tentar fallback
                 if self._is_cuda_error(stderr) and not self.cuda_fallback_attempted:
@@ -1189,15 +1061,11 @@ class VideoConverter(threading.Thread):
                     self._attempt_cpu_fallback()
                 else:
                     error_msg = f"Erro na conversão: {stderr}"
-                    self._call_callback("status", "Erro na conversão")
-                    self._call_callback("finished", False, error_msg)
-                    self._call_callback("log", error_msg)
+                    self._finalize_error(error_msg)
 
         except Exception as e:
             error_msg = f"Erro inesperado: {str(e)}"
-            self._call_callback("status", "Erro na conversão")
-            self._call_callback("finished", False, error_msg)
-            self._call_callback("log", error_msg)
+            self._finalize_error(error_msg)
 
     def _is_cuda_error(self, error_message):
         """
@@ -1265,47 +1133,25 @@ class VideoConverter(threading.Thread):
             self.monitor_progress(total_duration)
 
             # Aguardar conclusão sem bloquear as streams
-            while self.process.poll() is None and not self.cancelled:
-                time.sleep(0.1)
+            self._wait_while_running()
 
-            # Capturar saída final se necessário
-            stdout = ""
-            stderr = ""
-            if self.process.stdout:
-                try:
-                    stdout = self.process.stdout.read()
-                except:
-                    pass
-            if self.process.stderr:
-                try:
-                    stderr = self.process.stderr.read()
-                except:
-                    pass
-
-            if self.cancelled:
-                self._call_callback(
-                    "finished", False, "Conversão cancelada pelo usuário"
-                )
+            # Capturar saída final com helper e tratar cancelamento
+            stdout, stderr = self._read_process_output()
+            if self._check_and_handle_cancel():
                 return
 
             if self.process.returncode == 0:
-                self._call_callback("status", "Conversão concluída com sucesso (CPU)!")
-                self._call_callback("progress", 100)
-                self._call_callback(
-                    "finished", True, "Conversão concluída com sucesso usando CPU!"
+                self._finalize_success(
+                    "Conversão concluída com sucesso (CPU)!",
+                    "Conversão concluída com sucesso usando CPU!",
                 )
-                self._call_callback("log", f"Arquivo salvo em: {self.output_file}")
             else:
                 error_msg = f"Erro na conversão (CPU): {stderr}"
-                self._call_callback("status", "Erro na conversão")
-                self._call_callback("finished", False, error_msg)
-                self._call_callback("log", error_msg)
+                self._finalize_error(error_msg)
 
         except Exception as e:
             error_msg = f"Erro no fallback CPU: {str(e)}"
-            self._call_callback("status", "Erro na conversão")
-            self._call_callback("finished", False, error_msg)
-            self._call_callback("log", error_msg)
+            self._finalize_error(error_msg)
 
     def _call_callback(self, callback_type, *args):
         """
@@ -1357,9 +1203,6 @@ class VideoConverter(threading.Thread):
             "log",
             f"Iniciando monitoramento de progresso. Duração total: {total_duration}s",
         )
-
-        import threading
-        import time
 
         def read_output(pipe, pipe_name):
             """Lê a saída do pipe em thread separada"""
@@ -1477,291 +1320,378 @@ class VideoConverter(threading.Thread):
             except Exception as e:
                 self._call_callback("log", f"Erro ao fechar pipes: {e}")
 
-
-class VideoConverterManager:
-    """
-    Gerenciador principal para conversões de vídeo
-    Interface simplificada para uso na GUI
-    """
-
-    def __init__(self):
-        self.converter_thread = None
-
-        # Detectar configuração de hardware
-        self.hardware_config_obj = get_hardware_config()
-        self.hardware_config = self.hardware_config_obj.auto_configure()
-        self.cuda_available = self.hardware_config.get("hardware_acceleration", {}).get(
-            "enabled", False
-        )
-
-        # Formatos suportados baseados na configuração de hardware
-        self.supported_formats = self._build_supported_formats()
-
-    def _build_supported_formats(self):
+    # ===================== Helpers de Finalização =====================
+    def _read_process_output(self):
         """
-        Constrói lista de formatos suportados baseada na configuração de hardware
+        Lê com segurança as saídas finais de stdout e stderr do processo FFmpeg.
+
+        Retorna:
+            tuple(str, str): Conteúdo de stdout e stderr, respectivamente.
         """
-        formats = {
-            "input": [".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv", ".m4v"],
-            "output": {},
-        }
+        stdout = ""
+        stderr = ""
+        try:
+            if self.process and self.process.stdout:
+                stdout = self.process.stdout.read()
+        except Exception:
+            pass
+        try:
+            if self.process and self.process.stderr:
+                stderr = self.process.stderr.read()
+        except Exception:
+            pass
+        return stdout, stderr
 
-        # Formatos básicos sempre disponíveis
-        formats["output"].update({"WebM (VP9)": ".webm", "WEBP (Animado)": ".webp"})
+    def _check_and_handle_cancel(self) -> bool:
+        """
+        Verifica se a conversão foi cancelada e dispara o callback adequado.
 
-        # Adicionar formatos H.264 e H.265 com indicação de aceleração
-        if self.cuda_available:
-            # Formatos com aceleração CUDA disponível
-            formats["output"].update(
-                {
-                    "MP4 (H.264 - NVENC)": ".mp4",
-                    "AVI (H.264 - NVENC)": ".avi",
-                    "MOV (H.264 - NVENC)": ".mov",
-                    "MKV (H.264 - NVENC)": ".mkv",
-                    "MP4 (H.265 - NVENC)": ".mp4",
-                    "MKV (H.265 - NVENC)": ".mkv",
-                    # Opções CPU como fallback
-                    "MP4 (H.264 - CPU)": ".mp4",
-                    "AVI (H.264 - CPU)": ".avi",
-                    "MOV (H.264 - CPU)": ".mov",
-                    "MKV (H.264 - CPU)": ".mkv",
-                    "MP4 (H.265 - CPU)": ".mp4",
-                }
+        Retorna:
+            bool: True se a operação foi cancelada e tratada, False caso contrário.
+        """
+        if self.cancelled:
+            self._call_callback("finished", False, "Conversão cancelada pelo usuário")
+            return True
+
+    # ===================== Helpers Utilitários =====================
+    def _prepare_input_and_basic_diagnostics(self, cmd, operation_label):
+        """
+        Prepara a entrada do FFmpeg e executa diagnósticos básicos.
+
+        Args:
+            cmd: Lista do comando FFmpeg que será extendida.
+            operation_label: Rótulo amigável da operação (ex.: 'GIF', 'Frames', 'Áudio').
+        """
+        try:
+            if os.path.exists(self.input_file):
+                file_size = os.path.getsize(self.input_file) / (1024 * 1024)  # MB
+                self._call_callback(
+                    "log", f"🔍 Tamanho do arquivo de entrada: {file_size:.1f} MB"
+                )
+                if file_size > 100:
+                    self._call_callback(
+                        "log",
+                        "🚨 AVISO: Arquivo grande detectado - pode causar alto consumo de memória",
+                    )
+            else:
+                self._call_callback(
+                    "log", "🚨 ERRO: Arquivo de entrada não encontrado!"
+                )
+        except Exception as e:
+            self._call_callback(
+                "log", f"Erro ao diagnosticar entrada ({operation_label}): {e}"
             )
+
+        # Arquivo de entrada
+        cmd.extend(["-i", self.input_file])
+
+    def _append_overwrite_flag(self, cmd):
+        """
+        Adiciona a flag de sobrescrita ao comando FFmpeg.
+
+        Args:
+            cmd: Lista do comando FFmpeg
+        """
+        cmd.extend(["-y"])  # Sobrescrever arquivo(s) de saída
+
+    def _run_subprocess_with_logging(self, cmd, timeout=30, context="subprocess"):
+        """
+        Executa subprocess.run com logs padronizados e tratamento de erros.
+
+        Args:
+            cmd: Comando a executar (lista)
+            timeout: Tempo limite em segundos
+            context: Rótulo de contexto para logs
+
+        Returns:
+            subprocess.CompletedProcess | None: Resultado da execução, se disponível
+        """
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='replace',
+                timeout=timeout,
+            )
+
+            self._call_callback("log", f"{context} returncode: {result.returncode}")
+            if result.stdout:
+                preview = result.stdout[:200].replace("\n", " ")
+                self._call_callback("log", f"{context} stdout: {preview}...")
+            if result.stderr:
+                self._call_callback("log", f"{context} stderr: {result.stderr}")
+
+            return result
+        except subprocess.TimeoutExpired:
+            self._call_callback(
+                "log", f"{context} timeout - comando demorou mais de {timeout} segundos"
+            )
+            return None
+
+    def _log_operation_start(self, operation_label: str, settings_dict: dict):
+        """
+        Registra logs padronizados de início de operação (diagnóstico, configurações e arquivo de entrada).
+
+        Args:
+            operation_label: Rótulo da operação (ex.: 'GIF', 'FRAMES', 'ÁUDIO').
+            settings_dict: Dicionário de configurações específicas da operação.
+        """
+        try:
+            self._call_callback(
+                "log", f"🔍 DIAGNÓSTICO {operation_label}: Iniciando construção do comando"
+            )
+            self._call_callback(
+                "log", f"🔍 Configurações {operation_label}: {settings_dict}"
+            )
+            self._call_callback(
+                "log", f"🔍 Arquivo de entrada: {self.input_file}"
+            )
+        except Exception as e:
+            self._call_callback(
+                "log", f"Erro ao registrar início de operação ({operation_label}): {e}"
+            )
+        except FileNotFoundError as e:
+            self._call_callback("log", f"{context} não encontrado: {str(e)}")
+            return None
+        except Exception as e:
+            self._call_callback("log", f"Erro em {context}: {str(e)}")
+            return None
+
+    def _decide_gpu_usage(self, task_label: str, use_hardware: bool, performance_config: dict):
+        """
+        Decide de forma unificada se a operação deve usar GPU (CUDA) ou CPU.
+
+        Args:
+            task_label: Rótulo da tarefa (ex.: 'video_encoding', 'video_decoding').
+            use_hardware: Flag geral de uso de aceleração por hardware.
+            performance_config: Dicionário de preferências de performance (cpu/nvidia).
+
+        Returns:
+            tuple[bool, int]: (use_cuda, device_index) onde use_cuda indica se deve usar GPU
+            e device_index é o índice da GPU a ser utilizada (0 por padrão).
+        """
+        # Tentativa com o sistema universal (quando disponível)
+        try:
+            if hasattr(self, 'hardware_integration') and self.hardware_integration:
+                if use_hardware and self.hardware_integration.should_use_gpu_for_task(task_label):
+                    hw_config = self.hardware_integration.get_optimized_config_for_video_converter()
+                    gpu_config = hw_config.get("gpu", {})
+                    use_cuda = gpu_config.get("enabled", False)
+                    device_index = gpu_config.get("device_index", 0)
+                    self._call_callback(
+                        "log",
+                        f"Sistema universal: GPU {'habilitada' if use_cuda else 'desabilitada'} para {task_label}"
+                    )
+                    return use_cuda, device_index
+                else:
+                    self._call_callback("log", f"Sistema universal: Usando CPU para {task_label}")
+                    return False, 0
+        except Exception as e:
+            self._call_callback("log", f"Erro no sistema universal, usando fallback: {e}")
+
+        # Fallback para lógica original
+        cpu_preference = performance_config.get("cpu_preference", "auto")
+        nvidia_preference = performance_config.get("nvidia_preference", "auto")
+
+        if cpu_preference == "force":
+            use_cuda = False
+        elif nvidia_preference == "force" and self.cuda_available:
+            use_cuda = not getattr(self, 'cuda_fallback_attempted', False) and self.hw_settings.get("enabled", False)
         else:
-            # Apenas formatos CPU
-            formats["output"].update(
-                {
-                    "MP4 (H.264)": ".mp4",
-                    "AVI (H.264)": ".avi",
-                    "MOV (H.264)": ".mov",
-                    "MKV (H.264)": ".mkv",
-                    "MP4 (H.265)": ".mp4",
-                }
+            use_cuda = (
+                self.cuda_available
+                and use_hardware
+                and not getattr(self, 'cuda_fallback_attempted', False)
+                and self.hw_settings.get("enabled", False)
             )
 
-        # Adicionar novos formatos especiais
-        formats["output"].update(
-            {
-                "GIF (Animado)": ".gif",
-                "Extração de Frames": ".jpg",  # Extensão padrão, será sobrescrita dinamicamente
-                "Extração de Áudio": ".mp3",  # Extensão padrão, será sobrescrita dinamicamente
-            }
-        )
+        # Índice de GPU padrão em configurações locais
+        device_index = self.hardware_config.get("cuda_config", {}).get("gpu_index", 0)
+        return use_cuda, device_index
 
-        return formats
-
-    def get_max_concurrent_jobs(self, settings):
+    def _apply_video_scaling_and_fps(self, cmd, settings: dict):
         """
-        Obtém o número máximo de jobs simultâneos baseado no modo de performance
+        Aplica configurações de FPS e de resolução ao comando FFmpeg.
 
         Args:
-            settings: Configurações de conversão incluindo performance_config
-
-        Returns:
-            int: Número máximo de jobs simultâneos
+            cmd: Lista do comando FFmpeg que será extendida com flags de FPS e escala.
+            settings: Dicionário de configurações da conversão contendo chaves 'fps',
+                      'custom_fps', 'resolution', 'custom_width' e 'custom_height'.
         """
-        performance_config = settings.get("performance_config", {})
-        max_jobs = performance_config.get("max_concurrent_jobs", 2)
+        # FPS
+        try:
+            fps = settings.get("fps")
+            if fps and fps != "Original":
+                if fps == "Custom":
+                    custom_fps = settings.get("custom_fps", 30)
+                    cmd.extend(["-r", str(custom_fps)])
+                else:
+                    cmd.extend(["-r", str(fps)])
+        except Exception as e:
+            self._call_callback("log", f"Erro ao aplicar FPS: {e}")
 
-        # Ajustar baseado na disponibilidade de hardware
-        if not self.cuda_available and max_jobs > 1:
-            # Reduzir jobs simultâneos se não há aceleração de hardware
-            max_jobs = max(1, max_jobs // 2)
+        # Resolução
+        try:
+            resolution = settings.get("resolution")
+            if resolution and resolution != "Original":
+                if resolution == "Custom":
+                    width = settings.get("custom_width", 1920)
+                    height = settings.get("custom_height", 1080)
+                    cmd.extend(["-s", f"{width}x{height}"])
+                else:
+                    # Usar presets de resolução
+                    if resolution in RESOLUTION_PRESETS:
+                        res_value = RESOLUTION_PRESETS[resolution]
+                        if res_value and isinstance(res_value, tuple):
+                            # Converter tupla (width, height) para string "widthxheight"
+                            cmd.extend(["-s", f"{res_value[0]}x{res_value[1]}"])
+                        elif res_value:
+                            cmd.extend(["-s", res_value])
+        except Exception as e:
+            self._call_callback("log", f"Erro ao aplicar resolução: {e}")
 
-        return max_jobs
-
-    def get_hardware_info(self):
+    def _apply_transparency_if_supported(self, cmd, format_name: str, settings: dict):
         """
-        Retorna informações sobre a configuração de hardware disponível
-
-        Returns:
-            dict: Informações de hardware incluindo CUDA, GPU, etc.
-        """
-        # Obter informações do detector de hardware
-        detector = self.hardware_config_obj.get_hardware_detector()
-        gpu_info = {}
-        if detector:
-            gpu_info = detector.get_hardware_summary()
-
-        return {
-            "cuda_available": self.cuda_available,
-            "hardware_config": self.hardware_config,
-            "gpu_info": gpu_info,
-            "recommended_settings": self.hardware_config.get(
-                "recommended_settings", {}
-            ),
-            "cuda_settings": self.hardware_config.get("cuda_config", {}),
-            "quality_presets": self.hardware_config.get("quality_presets", {}),
-        }
-
-    def is_cuda_format(self, format_name):
-        """
-        Verifica se o formato especificado usa aceleração CUDA
+        Aplica transparência para formatos que suportam canal alfa quando habilitado nas configurações.
 
         Args:
-            format_name: Nome do formato (ex: 'MP4 (H.264 - NVENC)')
-
-        Returns:
-            bool: True se usa CUDA/NVENC
+            cmd: Lista do comando FFmpeg
+            format_name: Nome do formato de saída (ex.: 'WEBP', 'WebM', 'MOV')
+            settings: Dicionário de configurações, deve conter a chave 'transparency'.
         """
-        return "NVENC" in format_name
+        try:
+            if settings.get("transparency", False):
+                if "WEBP" in format_name or "WebM" in format_name or "MOV" in format_name:
+                    cmd.extend(["-pix_fmt", "yuva420p"])
+        except Exception as e:
+            self._call_callback("log", f"Erro ao aplicar transparência: {e}")
 
-    def is_supported_input_format(self, file_path):
+    def _apply_common_output_flags(self, cmd, apply_pix_fmt: bool = True, apply_faststart: bool = True):
         """
-        Verifica se o formato do arquivo é suportado
+        Aplica flags comuns de saída que melhoram compatibilidade e streaming.
 
         Args:
-            file_path: Caminho do arquivo
-
-        Returns:
-            bool: True se suportado
+            cmd: Lista do comando FFmpeg
+            apply_pix_fmt: Se True, aplica '-pix_fmt yuv420p' para compatibilidade ampla.
+            apply_faststart: Se True, aplica '-movflags +faststart' para otimizar streaming.
         """
-        is_valid, _ = validate_input_file(file_path)
-        return is_valid
+        try:
+            if apply_pix_fmt:
+                cmd.extend(["-pix_fmt", "yuv420p"])  
+            if apply_faststart:
+                cmd.extend(["-movflags", "+faststart"])  
+        except Exception as e:
+            self._call_callback("log", f"Erro ao aplicar flags comuns de saída: {e}")
 
-    def get_output_extension(self, format_name, frame_format=None, audio_format=None):
+    def _prepare_frame_output_pattern(self, output_dir: str, video_name: str, frame_format: str, auto_folder: bool = True) -> str:
         """
-        Retorna a extensão para o formato de saída
+        Prepara o padrão de saída para extração de frames, criando subpasta quando configurado.
 
         Args:
-            format_name: Nome do formato (ex: "MP4 (H.264)")
-            frame_format: Formato específico para extração de frames (JPG, PNG, WebP, TIFF)
-            audio_format: Formato específico para extração de áudio (MP3, AAC, WAV, etc.)
+            output_dir: Diretório base para saída.
+            video_name: Nome base do vídeo de entrada, sem extensão.
+            frame_format: Formato dos frames (ex.: 'jpg', 'png').
+            auto_folder: Se True, cria subpasta '<video_name>_frames'.
 
         Returns:
-            str: Extensão do arquivo
+            Caminho padrão para saída com placeholder de contagem '%04d'.
         """
-        # Para extração de frames, usar o formato específico selecionado
-        if "Extração de Frames" in format_name and frame_format:
-            frame_extensions = {
-                "JPG": ".jpg",
-                "PNG": ".png",
-                "WebP": ".webp",
-                "TIFF": ".tiff",
-            }
-            return frame_extensions.get(frame_format, ".jpg")
-        
-        # Para extração de áudio, usar o formato específico selecionado
-        if "Extração de Áudio" in format_name and audio_format:
-            if audio_format in AUDIO_CODEC_CONFIG:
-                return AUDIO_CODEC_CONFIG[audio_format]["extension"]
-            return ".mp3"  # Padrão
+        try:
+            fmt = frame_format.lower()
+            if auto_folder:
+                frame_folder = os.path.join(output_dir, f"{video_name}_frames")
+                os.makedirs(frame_folder, exist_ok=True)
+                return os.path.join(frame_folder, f"{video_name}_frame_%04d.{fmt}")
+            return os.path.join(output_dir, f"{video_name}_frame_%04d.{fmt}")
+        except Exception as e:
+            self._call_callback("log", f"Erro ao preparar padrão de saída de frames: {e}")
+            # Fallback simples para evitar quebra do fluxo
+            return os.path.join(output_dir, f"{video_name}_frame_%04d.{frame_format}")
 
-        return self.supported_formats["output"].get(format_name, ".mp4")
-
-    def start_conversion(self, input_file, output_dir, settings, callbacks):
+    def _apply_encoder_selection(self, cmd, format_name: str, selected_codec: str, use_cuda: bool):
         """
-        Inicia uma nova conversão
+        Aplica a escolha de encoder com base no formato de saída, codec escolhido e disponibilidade de GPU.
 
         Args:
-            input_file: Arquivo de entrada
-            output_dir: Diretório de saída
-            settings: Configurações de conversão
-            callbacks: Dicionário com funções callback
-
-        Returns:
-            VideoConverter: Thread de conversão ou None se inválido
+            cmd: Lista do comando FFmpeg a ser extendida.
+            format_name: Nome do formato de saída (ex.: 'MP4 (H.264)', 'WEBM (VP9)').
+            selected_codec: Codec preferido pelo usuário ('h264' ou 'hevc').
+            use_cuda: Se True, prefere NVENC quando aplicável.
         """
-        # Validar arquivo de entrada
-        is_valid, error_msg = validate_input_file(input_file)
-        if not is_valid:
-            if "log" in callbacks:
-                callbacks["log"](f"Erro na validação do arquivo: {error_msg}")
-            if "finished" in callbacks:
-                callbacks["finished"](False, f"Arquivo inválido: {error_msg}")
-            return None
+        try:
+            fmt_upper = format_name.upper()
+            if "VP9" in fmt_upper or "WEBM" in fmt_upper:
+                # VP9/WEBM não suporta NVENC; usar CPU com VP9
+                self.add_cpu_video_settings(cmd, "vp9")
+                self._call_callback("log", f"🔧 CORREÇÃO WEBM: Usando codec VP9 para formato {format_name}")
+                return
+            if "WEBP" in fmt_upper:
+                # WebP não tem suporte NVENC; usar CPU
+                self.add_cpu_video_settings(cmd, "webp")
+                return
 
-        # Validar diretório de saída
-        is_valid, error_msg = validate_output_directory(output_dir)
-        if not is_valid:
-            if "log" in callbacks:
-                callbacks["log"](f"Erro na validação do diretório: {error_msg}")
-            if "finished" in callbacks:
-                callbacks["finished"](False, f"Diretório inválido: {error_msg}")
-            return None
+            # MP4/MKV/MOV e outros com H.264/HEVC
+            if selected_codec == "hevc":
+                if use_cuda:
+                    self.add_cuda_video_settings(cmd, "hevc")
+                else:
+                    self.add_cpu_video_settings(cmd, "hevc")
+            else:  # h264 padrão
+                if use_cuda:
+                    self.add_cuda_video_settings(cmd, "h264")
+                else:
+                    self.add_cpu_video_settings(cmd, "h264")
+        except Exception as e:
+            self._call_callback("log", f"Erro ao aplicar seleção de encoder: {e}")
 
-        # Validar configurações
-        is_valid, error_msg = validate_conversion_settings(settings)
-        if not is_valid:
-            if "log" in callbacks:
-                callbacks["log"](f"Erro nas configurações: {error_msg}")
-            if "finished" in callbacks:
-                callbacks["finished"](False, f"Configurações inválidas: {error_msg}")
-            return None
-
-        # Cancelar conversão anterior se existir
-        self.cancel_conversion()
-
-        # Gerar nome do arquivo de saída
-        format_name = settings.get("format", "MP4 (H.264)")
-
-        # Obter extensão correta baseada no formato
-        extension = self.get_output_extension(format_name)
-        if extension.startswith("."):
-            extension = extension[1:]  # Remover o ponto inicial
-
-        # CORREÇÃO: Evitar dupla extensão para formatos especiais
-        if "Extração de Frames" in format_name:
-            # Para extração de frames, usar apenas o formato específico
-            frame_extension = self.get_output_extension(
-                format_name, settings.get("frame_extraction_settings", {}).get("format")
-            )
-            if frame_extension.startswith("."):
-                frame_extension = frame_extension[1:]
-            extension = frame_extension
-        elif "Extração de Áudio" in format_name:
-            # Para extração de áudio, usar o formato específico selecionado
-            audio_format = settings.get("audio_extraction_settings", {}).get("format", "MP3")
-            audio_extension = self.get_output_extension(
-                format_name, audio_format=audio_format
-            )
-            if audio_extension.startswith("."):
-                audio_extension = audio_extension[1:]
-            extension = audio_extension
-
-        # CORREÇÃO CRÍTICA: Problema de nomenclatura GIF identificado
-        # O FFmpeg não consegue processar nomes de arquivo com espaços e caracteres especiais
-        if "GIF (Animado)" in format_name:
-            # Para GIF, usar sempre extensão .gif simples, sem espaços ou caracteres especiais
-            extension = "gif"
-            # Gerar nome único sem caracteres problemáticos usando UUID
-            input_path = Path(input_file)
-            unique_id = str(uuid.uuid4()).replace("-", "")[:8]  # 8 caracteres únicos
-            output_filename = f"{input_path.stem}_gif_{unique_id}.gif"
-            self._call_callback(
-                "log",
-                f"🔧 CORREÇÃO APLICADA: Nome do arquivo GIF corrigido - {output_filename}",
-            )
-            self._call_callback(
-                "log",
-                f"🔧 DEBUG: format_name='{format_name}', input_file='{input_file}'",
-            )
-        else:
-            output_filename = generate_output_filename(
-                input_file, extension, "converted"
-            )
-            self._call_callback(
-                "log",
-                f"🔧 DEBUG: Formato normal - {format_name}, output_filename='{output_filename}'",
-            )
-        output_file = Path(output_dir) / output_filename
-
-        # Criar thread de conversão
-        self.converter_thread = VideoConverter()
-        self.converter_thread.set_conversion_parameters(
-            input_file, str(output_file), settings, callbacks
-        )
-
-        # Iniciar conversão
-        self.converter_thread.start()
-
-        return self.converter_thread
-
-    def cancel_conversion(self):
+    def _finalize_success(self, status_msg, finished_msg=None):
         """
-        Cancela a conversão atual
+        Finaliza o fluxo de sucesso de conversão, consolidando callbacks.
+
+        Args:
+            status_msg: Mensagem para o callback de status.
+            finished_msg: Mensagem do callback de finished (padrão: status_msg).
         """
-        if self.converter_thread and self.converter_thread.is_alive():
-            self.converter_thread.cancel_conversion()
-            self.converter_thread.join(5)  # Aguardar até 5 segundos
+        try:
+            self._call_callback("status", status_msg)
+            self._call_callback("progress", 100)
+            self._call_callback("finished", True, finished_msg or status_msg)
+            self._call_callback("log", f"Arquivo salvo em: {self.output_file}")
+        except Exception as e:
+            # Em caso de erro nos callbacks, registrar para diagnóstico
+            print(f"Erro ao finalizar sucesso: {e}")
+
+    def _finalize_error(self, error_msg):
+        """
+        Finaliza o fluxo de erro de conversão, consolidando callbacks.
+
+        Args:
+            error_msg: Mensagem de erro detalhada para logs e finished.
+        """
+        try:
+            self._call_callback("status", "Erro na conversão")
+            self._call_callback("finished", False, error_msg)
+            self._call_callback("log", error_msg)
+        except Exception as e:
+            # Em caso de erro nos callbacks, registrar para diagnóstico
+            print(f"Erro ao finalizar erro: {e}")
+
+    def _wait_while_running(self, sleep_seconds=0.1):
+        """
+        Aguarda o término do processo FFmpeg enquanto não houver cancelamento.
+
+        Args:
+            sleep_seconds: Intervalo entre verificações do estado do processo.
+        """
+        try:
+            while self.process and self.process.poll() is None and not self.cancelled:
+                time.sleep(sleep_seconds)
+        except Exception as e:
+            # Não bloquear fluxo por falha na espera; registrar para diagnóstico.
+            self._call_callback("log", f"Erro durante espera do processo: {e}")
+        return False
+
+
+# VideoConverterManager foi movido para video_converter_manager.py

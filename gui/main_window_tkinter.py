@@ -48,6 +48,12 @@ from utils.updater import UpdateChecker
 from gui.update_widget import UpdateWidget
 from gui.youtube_api_downloader import YouTubeAPIDownloader
 
+# Importações do sistema de banco de dados
+from database.video_metadata_db import VideoMetadataDB
+from database.metadata_extractor import MetadataExtractor
+from database.video_queries import VideoQueries
+from database.storyboard_downloader import StoryboardDownloader
+
 
 
 
@@ -81,6 +87,9 @@ class MainWindow:
         self.youtube_api_key = "AIzaSyBpZfgIsbwLEv7jlHQyOTE4jXdREMWkZNA"
         self.youtube_api_downloader = YouTubeAPIDownloader(self.youtube_api_key)
         
+        # Inicializar sistema de banco de dados
+        self._setup_database()
+        
         # Inicializar extrator de navegador avançado
 
 
@@ -95,6 +104,9 @@ class MainWindow:
 
         # Verificar FFmpeg na inicialização
         self.check_ffmpeg_installation()
+        
+        # CORREÇÃO CRÍTICA: Configurar fechamento seguro da aplicação
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def log(self, message):
         """
@@ -195,11 +207,17 @@ class MainWindow:
         # Criar aba "Logs"
         self.logs_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.logs_frame, text="Logs")
+        
+        # Criar aba "Biblioteca de Vídeos"
+        self.library_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.library_frame, text="📚 Biblioteca de Vídeos")
 
         # Configurar grid das abas
         self.files_frame.columnconfigure(1, weight=1)
         self.logs_frame.columnconfigure(0, weight=1)
         self.logs_frame.rowconfigure(0, weight=1)
+        self.library_frame.columnconfigure(0, weight=1)
+        self.library_frame.rowconfigure(0, weight=1)
 
         # Seção de arquivos (na aba Arquivos)
         self.create_file_section(self.files_frame, 0)
@@ -215,6 +233,9 @@ class MainWindow:
 
         # Seção de logs (na aba Logs)
         self.create_logs_tab_content(self.logs_frame)
+        
+        # Seção da biblioteca de vídeos (na aba Biblioteca de Vídeos)
+        self.create_library_tab_content(self.library_frame)
 
         # Barra de status
         self.create_status_bar()
@@ -486,6 +507,13 @@ class MainWindow:
                 ydl.download([url])
 
             self.show_info_on_main_thread("Download Concluído", "O vídeo foi baixado com sucesso usando o navegador avançado!")
+            
+            # Hook: Extrair metadados após download bem-sucedido
+            try:
+                self._extract_and_store_metadata(url)
+            except Exception as e:
+                self.log_youtube(f"⚠ Erro na extração de metadados: {e}")
+            
             return True
 
         except Exception as e:
@@ -560,6 +588,12 @@ class MainWindow:
                 ydl.download([url])
             
             self.show_info_on_main_thread("Download Concluído", "O vídeo foi baixado com sucesso usando o método básico!")
+            
+            # Hook: Extrair metadados após download bem-sucedido
+            try:
+                self._extract_and_store_metadata(url)
+            except Exception as e:
+                self.log_youtube(f"⚠ Erro na extração de metadados: {e}")
 
         except Exception as e:
             self.log_youtube(f"Erro no download básico: {e}")
@@ -753,11 +787,10 @@ class MainWindow:
                 'max_sleep_interval': 8,
                 'ignoreerrors': False,
                 'no_warnings': False,
-                # Remover conversão forçada para MP4 para evitar problemas
-                # 'postprocessors': [{
-                #     'key': 'FFmpegVideoConvertor',
-                #     'preferedformat': 'mp4',
-                # }],
+                'postprocessors': [{
+                    'key': 'FFmpegVideoConvertor',
+                    'preferedformat': 'mp4',
+                }],
             }
 
             # Estratégias anti-bot ordenadas por compatibilidade com códigos específicos
@@ -904,6 +937,14 @@ class MainWindow:
                         if self.validate_downloaded_resolution(download_info, resolution):
                             self.log_youtube(f"✅ Download concluído com sucesso usando {strategy['name']} - Resolução validada!")
                             self.show_info_on_main_thread("Download Concluído", f"O vídeo foi baixado com sucesso usando {strategy['name']} na resolução {resolution}!")
+                            
+                            # Hook: Extrair metadados após download bem-sucedido
+                            try:
+                                output_file = download_info.get('filepath') if download_info else None
+                                self._extract_and_store_metadata(url, output_file)
+                            except Exception as e:
+                                self.log_youtube(f"⚠ Erro na extração de metadados: {e}")
+                            
                             return
                         else:
                             self.log_youtube(f"⚠ Estratégia {strategy['name']} baixou resolução incorreta, tentando próxima...")
@@ -913,6 +954,14 @@ class MainWindow:
                         # Se chegou aqui, sucesso!
                         self.log_youtube(f"✅ Download concluído com sucesso usando {strategy['name']}!")
                         self.show_info_on_main_thread("Download Concluído", f"O vídeo foi baixado com sucesso usando {strategy['name']}!")
+                        
+                        # Hook: Extrair metadados após download bem-sucedido
+                        try:
+                            output_file = download_info.get('filepath') if download_info else None
+                            self._extract_and_store_metadata(url, output_file)
+                        except Exception as e:
+                            self.log_youtube(f"⚠ Erro na extração de metadados: {e}")
+                        
                         return
                     
                 except yt_dlp.utils.ExtractorError as e:
@@ -994,7 +1043,7 @@ class MainWindow:
             self.root.after(0, finish_download)
             
             self.log_youtube("Download finalizado!")
-            filename = d.get('filename')
+            filename = d.get('filepath') or d.get('filename')
             
             # Verificar se é o arquivo final ou um arquivo intermediário (parte do merge)
             # Arquivos intermediários geralmente têm padrões como .f399.mp4, .f251.webm
@@ -2034,6 +2083,117 @@ class MainWindow:
         # Inicializar buffer para logs do YouTube
         self.youtube_log_buffer = []
 
+    def create_library_tab_content(self, parent):
+        """
+        Cria o conteúdo da aba Biblioteca de Vídeos
+        """
+        # Configurar grid do parent
+        parent.columnconfigure(0, weight=1)
+        parent.rowconfigure(1, weight=1)
+
+        # Frame superior com controles de filtro e busca
+        controls_frame = ttk.LabelFrame(parent, text="Filtros e Busca", padding="10")
+        controls_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
+        controls_frame.columnconfigure(1, weight=1)
+
+        # Campo de busca
+        ttk.Label(controls_frame, text="Buscar:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
+        self.search_var = tk.StringVar()
+        self.search_entry = ttk.Entry(controls_frame, textvariable=self.search_var, width=40)
+        self.search_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 10))
+        self.search_entry.bind('<KeyRelease>', self.on_search_changed)
+
+        # Botão de busca
+        self.search_btn = ttk.Button(controls_frame, text="🔍 Buscar", command=self.search_videos)
+        self.search_btn.grid(row=0, column=2, padx=(0, 10))
+
+        # Botão de atualizar
+        self.refresh_btn = ttk.Button(controls_frame, text="🔄 Atualizar", command=self.refresh_library)
+        self.refresh_btn.grid(row=0, column=3)
+
+        # Seletor de modo de exibição (lista/árvore)
+        ttk.Label(controls_frame, text="Modo:").grid(row=0, column=4, sticky=tk.W, padx=(10, 5))
+        self.library_view_mode = tk.StringVar(value='lista')
+        self.library_view_combo = ttk.Combobox(
+            controls_frame,
+            textvariable=self.library_view_mode,
+            values=['lista', 'árvore'],
+            state='readonly',
+            width=10
+        )
+        self.library_view_combo.grid(row=0, column=5, padx=(0, 10))
+        self.library_view_combo.bind('<<ComboboxSelected>>', lambda e: self.refresh_library())
+
+        # Frame principal da biblioteca
+        library_main_frame = ttk.LabelFrame(parent, text="Biblioteca de Vídeos", padding="5")
+        library_main_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        library_main_frame.columnconfigure(0, weight=1)
+        library_main_frame.rowconfigure(0, weight=1)
+
+        # Treeview para exibir os vídeos
+        # Adiciona coluna 'position' para filhos em playlists e coluna oculta 'id' para uso interno
+        columns = ('title', 'channel', 'position', 'duration', 'upload_date', 'file_path', 'id')
+        self.library_tree = ttk.Treeview(library_main_frame, columns=columns, show='tree headings', height=15)
+        
+        # Configurar colunas
+        self.library_tree.heading('#0', text='Thumbnail')
+        self.library_tree.heading('title', text='Título')
+        self.library_tree.heading('channel', text='Canal')
+        self.library_tree.heading('position', text='Posição')
+        self.library_tree.heading('duration', text='Duração')
+        self.library_tree.heading('upload_date', text='Data de Upload')
+        self.library_tree.heading('file_path', text='Arquivo')
+
+        # Configurar larguras das colunas
+        self.library_tree.column('#0', width=100, minwidth=80)
+        self.library_tree.column('title', width=300, minwidth=200)
+        self.library_tree.column('channel', width=150, minwidth=100)
+        self.library_tree.column('position', width=80, minwidth=60)
+        self.library_tree.column('duration', width=80, minwidth=60)
+        self.library_tree.column('upload_date', width=100, minwidth=80)
+        self.library_tree.column('file_path', width=200, minwidth=150)
+        # Coluna oculta para IDs internos (video_id/playlist_id)
+        self.library_tree.heading('id', text='ID')
+        self.library_tree.column('id', width=0, minwidth=0, stretch=False)
+
+        # Scrollbars para o Treeview
+        tree_scrollbar_v = ttk.Scrollbar(library_main_frame, orient=tk.VERTICAL, command=self.library_tree.yview)
+        tree_scrollbar_h = ttk.Scrollbar(library_main_frame, orient=tk.HORIZONTAL, command=self.library_tree.xview)
+        self.library_tree.configure(yscrollcommand=tree_scrollbar_v.set, xscrollcommand=tree_scrollbar_h.set)
+
+        # Grid do Treeview e scrollbars
+        self.library_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        tree_scrollbar_v.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        tree_scrollbar_h.grid(row=1, column=0, sticky=(tk.W, tk.E))
+
+        # Configurar grid weights
+        library_main_frame.columnconfigure(0, weight=1)
+        library_main_frame.rowconfigure(0, weight=1)
+
+        # Bind para duplo clique
+        self.library_tree.bind('<Double-1>', self.on_video_double_click)
+        # Bind de expansão para modo árvore com lazy load
+        self.library_tree.bind('<<TreeviewOpen>>', self.on_library_node_open)
+        
+        # Menu de contexto
+        self.create_library_context_menu()
+
+    def create_library_context_menu(self):
+        """
+        Cria o menu de contexto para a biblioteca de vídeos
+        """
+        self.library_context_menu = tk.Menu(self.root, tearoff=0)
+        self.library_context_menu.add_command(label="📂 Abrir Arquivo", command=self.open_video_file)
+        self.library_context_menu.add_command(label="📁 Abrir Pasta", command=self.open_video_folder)
+        self.library_context_menu.add_separator()
+        self.library_context_menu.add_command(label="📋 Copiar URL", command=self.copy_video_url)
+        self.library_context_menu.add_command(label="ℹ️ Detalhes", command=self.show_video_details)
+        self.library_context_menu.add_separator()
+        self.library_context_menu.add_command(label="🗑️ Remover da Biblioteca", command=self.remove_from_library)
+
+        # Bind do menu de contexto
+        self.library_tree.bind('<Button-3>', self.show_library_context_menu)
+
     def create_log_section(self, parent, row):
         """
         Cria a seção de logs com splitter redimensionável e botão de salvar
@@ -2082,12 +2242,32 @@ class MainWindow:
 
     def create_status_bar(self):
         """
-        Cria a barra de status
+        Cria a barra de status com indicador térmico do HD
         """
+        # Frame principal da barra de status
+        status_frame = ttk.Frame(self.root, relief=tk.SUNKEN)
+        status_frame.grid(row=1, column=0, sticky=(tk.W, tk.E))
+        status_frame.columnconfigure(0, weight=1)
+        
+        # Label principal de status
         self.status_bar = ttk.Label(
-            self.root, text="Pronto para Conversão", relief=tk.SUNKEN, anchor=tk.W
+            status_frame, text="Pronto para Conversão", anchor=tk.W
         )
-        self.status_bar.grid(row=1, column=0, sticky=(tk.W, tk.E))
+        self.status_bar.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(5, 0))
+        
+        # Frame para indicadores térmicos
+        thermal_frame = ttk.Frame(status_frame)
+        thermal_frame.grid(row=0, column=1, sticky=tk.E, padx=(0, 5))
+        
+        # Indicador térmico do HD
+        self.hd_thermal_label = ttk.Label(
+            thermal_frame, text="🌡️ HD: --°C", foreground="gray"
+        )
+        self.hd_thermal_label.grid(row=0, column=0, padx=(5, 0))
+        
+        # Inicializar monitoramento térmico
+        self.hd_thermal_status = {"status": "normal", "temperature": None, "paused": False}
+        self.start_thermal_monitoring()
 
     def create_logs_directory(self):
         """
@@ -2547,8 +2727,8 @@ class MainWindow:
                 config = PerformanceModeConfig.get_mode_config(mode)
                 tooltip_text = f"{config['name']}\n"
                 tooltip_text += f"📝 {config['description']}\n\n"
-                tooltip_text += f"🖥️ CPU: {config['cpu_preference']}\n"
-                tooltip_text += f"🎮 NVIDIA: {config['nvidia_preference']}\n"
+                tooltip_text += f"🖥️ CPU: {config['prefer_cpu']}\n"
+                tooltip_text += f"🎮 NVIDIA: {config['prefer_nvidia']}\n"
                 tooltip_text += (
                     f"⚡ Jobs simultâneos: {config['max_concurrent_jobs']}\n"
                 )
@@ -3201,6 +3381,139 @@ class MainWindow:
         }
         self.queue_manager.set_global_callbacks(callbacks)
 
+    def _setup_database(self):
+        """
+        Inicializa o sistema de banco de dados SQLite para metadados de vídeo
+        """
+        try:
+            # Criar diretório para o banco de dados se não existir
+            db_dir = Path("database_files")
+            db_dir.mkdir(exist_ok=True)
+            
+            # Caminho do banco de dados
+            db_path = db_dir / "video_metadata.db"
+            
+            # Inicializar componentes do banco de dados
+            self.db_manager = VideoMetadataDB(str(db_path))
+            self.metadata_extractor = MetadataExtractor(str(db_path))
+            self.video_queries = VideoQueries(str(db_path))
+            self.storyboard_downloader = StoryboardDownloader(str(db_path))
+            
+            # Criar tabelas se não existirem
+            self.db_manager.create_tables()
+            
+            # Criar diretório para cache de thumbnails e storyboards
+            self.cache_dir = Path("cache")
+            self.cache_dir.mkdir(exist_ok=True)
+            (self.cache_dir / "thumbnails").mkdir(exist_ok=True)
+            (self.cache_dir / "storyboards").mkdir(exist_ok=True)
+            
+            self.log("✅ Sistema de banco de dados inicializado com sucesso")
+            
+            # Carregar dados iniciais na biblioteca
+            if hasattr(self, 'library_tree'):
+                self.refresh_library()
+            
+        except Exception as e:
+            error_msg = f"Erro ao inicializar banco de dados: {str(e)}"
+            self.log(f"❌ {error_msg}")
+            print(f"Database setup error: {error_msg}")
+            
+            # Inicializar com valores None para evitar erros
+            self.db_manager = None
+            self.metadata_extractor = None
+            self.video_queries = None
+            self.storyboard_downloader = None
+
+    def _extract_and_store_metadata(self, url, output_file=None):
+        """
+        Extrai e armazena metadados de um vídeo do YouTube em background
+        
+        Args:
+            url (str): URL do vídeo do YouTube
+            output_file (str, optional): Caminho do arquivo baixado
+        """
+        if not self.metadata_extractor:
+            self.log("⚠ Sistema de banco de dados não inicializado, pulando extração de metadados")
+            return
+            
+        try:
+            self.log("🔍 Iniciando extração de metadados em background...")
+            
+            # Extrair e armazenar metadados usando o MetadataExtractor
+            video_id = self.metadata_extractor.process_and_store_metadata(url, save_thumbnails=True)
+            
+            if video_id:
+                # Buscar os metadados salvos para obter o título
+                if self.video_queries:
+                    video_details = self.video_queries.get_video_details(video_id)
+                    if video_details:
+                        title = video_details.get('title', 'Título não disponível')
+                        self.log(f"✅ Metadados extraídos e salvos: {title}")
+                    else:
+                        self.log(f"✅ Metadados extraídos e salvos para vídeo: {video_id}")
+                else:
+                    self.log(f"✅ Metadados extraídos e salvos para vídeo: {video_id}")
+                
+                # Se temos o arquivo de saída, atualizar o caminho no banco
+                if output_file and os.path.exists(output_file):
+                    # Atualizar o caminho do arquivo local no banco de dados
+                    if self.db_manager:
+                        try:
+                            # Aqui você pode adicionar lógica para atualizar o caminho do arquivo
+                            self.log(f"📁 Arquivo local: {output_file}")
+                        except Exception as e:
+                            self.log(f"⚠ Erro ao atualizar caminho do arquivo: {e}")
+                
+            else:
+                self.log("⚠ Não foi possível extrair metadados do vídeo")
+                
+        except Exception as e:
+            self.log(f"❌ Erro na extração de metadados: {str(e)}")
+
+    def _download_media_assets(self, metadata):
+        """
+        Baixa thumbnails e storyboards em background
+        
+        Args:
+            metadata (dict): Metadados do vídeo
+        """
+        if not metadata:
+            return
+            
+        try:
+            video_id = metadata.get('id')
+            if not video_id:
+                return
+                
+            # Criar diretórios específicos para este vídeo
+            video_cache_dir = self.cache_dir / video_id
+            video_cache_dir.mkdir(exist_ok=True)
+            
+            # Baixar thumbnails
+            thumbnails = metadata.get('thumbnails', [])
+            if thumbnails:
+                self.log(f"🖼 Baixando {len(thumbnails)} thumbnails...")
+                # Aqui você pode implementar o download das thumbnails
+                
+            # Baixar storyboards se disponíveis
+            if self.storyboard_downloader:
+                try:
+                    storyboard_url = metadata.get('url', '')
+                    if storyboard_url:
+                        self.log("🎬 Baixando storyboards...")
+                        storyboards = self.storyboard_downloader.download_storyboards(
+                            storyboard_url, 
+                            str(video_cache_dir)
+                        )
+                        if storyboards:
+                            self.log(f"✅ {len(storyboards)} storyboards baixados")
+                except Exception as e:
+                    self.log(f"⚠ Erro ao baixar storyboards: {e}")
+                    
+        except Exception as e:
+            self.log(f"❌ Erro no download de assets: {str(e)}")
+
     def _on_queue_updated(self, queue_data):
         """
         Callback para atualização da fila de conversão
@@ -3402,6 +3715,12 @@ class MainWindow:
             if success:
                 self.log_youtube("🎉 Download concluído com sucesso!")
                 self.show_info_on_main_thread("Download Concluído", "Vídeo baixado com sucesso usando método híbrido!")
+                
+                # Hook: Extrair metadados após download bem-sucedido
+                try:
+                    self._extract_and_store_metadata(url)
+                except Exception as e:
+                    self.log_youtube(f"⚠ Erro na extração de metadados: {e}")
             else:
                 # Se o método híbrido falhou, usar fallback tradicional
                 self.log_youtube("🔄 Método híbrido falhou, tentando fallback tradicional...")
@@ -3417,6 +3736,850 @@ class MainWindow:
             except Exception as fallback_error:
                 final_error = f"API falhou: {str(e)}\nFallback yt-dlp também falhou: {str(fallback_error)}"
                 self.show_error_on_main_thread("Erro de Download", final_error)
+
+    # ==================== MÉTODOS DA BIBLIOTECA DE VÍDEOS ====================
+
+    def refresh_library(self):
+        """
+        Atualiza a lista de vídeos na biblioteca
+        """
+        try:
+            if not hasattr(self, 'video_queries') or not self.video_queries:
+                self.log("⚠ Sistema de banco de dados não inicializado")
+                return
+
+            # Limpar árvore atual
+            for item in self.library_tree.get_children():
+                self.library_tree.delete(item)
+
+            # Decidir modo de exibição
+            mode = getattr(self, 'library_view_mode', None)
+            is_tree_mode = (mode.get() == 'árvore') if mode else False
+
+            if not is_tree_mode:
+                # Modo lista: buscar todos os vídeos e listar
+                videos = self.video_queries.get_all_videos()
+                for video in videos:
+                    duration = self._format_duration(video.get('duration_seconds'))
+                    upload_date = self._format_upload_date(video.get('upload_date'))
+                    self.library_tree.insert('', 'end', values=(
+                        video.get('title', 'Sem título'),
+                        video.get('uploader', 'Desconhecido'),
+                        '',
+                        duration,
+                        upload_date,
+                        video.get('file_path', ''),
+                        video.get('video_id', '')
+                    ), tags=('video',))
+                self.log(f"📚 Biblioteca (lista) atualizada: {len(videos)} vídeos encontrados")
+            else:
+                # Modo árvore: listar playlists como nós raiz e lazy-load dos filhos
+                playlists = []
+                try:
+                    playlists = self.video_queries.list_playlists()
+                except Exception as e:
+                    self.log(f"⚠ Não foi possível listar playlists: {e}")
+                
+                for pl in playlists:
+                    pl_id = pl.get('id') or pl.get('video_id')
+                    title = pl.get('title', 'Playlist sem título')
+                    uploader = pl.get('uploader', 'Desconhecido')
+                    # Contagem de filhos
+                    count = 0
+                    try:
+                        if pl_id:
+                            count = self.video_queries.count_playlist_children(pl_id)
+                    except Exception as e:
+                        self.log(f"⚠ Erro ao contar vídeos da playlist: {e}")
+                    display_title = f"{title} ({count} vídeos)" if count else title
+                    parent_iid = self.library_tree.insert('', 'end', text='📃', values=(
+                        display_title,
+                        uploader,
+                        '',
+                        '',
+                        '',
+                        '',
+                        pl_id or ''
+                    ), tags=('playlist',))
+                    # Placeholder para permitir expansão
+                    self.library_tree.insert(parent_iid, 'end', text='⏳ Carregando...', values=('', '', '', '', ''), tags=('placeholder',))
+                self.log(f"📚 Biblioteca (árvore) atualizada: {len(playlists)} playlists")
+
+        except Exception as e:
+            self.log(f"❌ Erro ao atualizar biblioteca: {str(e)}")
+
+    def search_videos(self):
+        """
+        Busca vídeos na biblioteca baseado no termo de busca
+        """
+        try:
+            search_term = self.search_var.get().strip()
+            
+            if not hasattr(self, 'video_queries') or not self.video_queries:
+                self.log("⚠ Sistema de banco de dados não inicializado")
+                return
+
+            # Limpar árvore atual
+            for item in self.library_tree.get_children():
+                self.library_tree.delete(item)
+
+            # Buscar vídeos
+            mode = getattr(self, 'library_view_mode', None)
+            is_tree_mode = (mode.get() == 'árvore') if mode else False
+
+            if not is_tree_mode:
+                # Modo lista: busca tradicional
+                if search_term:
+                    videos = self.video_queries.search_videos(search_term)
+                    self.log(f"🔍 Busca por '{search_term}': {len(videos)} resultados")
+                else:
+                    videos = self.video_queries.get_all_videos()
+                    self.log(f"📚 Mostrando todos os vídeos: {len(videos)}")
+                for video in videos:
+                    duration = self._format_duration(video.get('duration_seconds'))
+                    upload_date = self._format_upload_date(video.get('upload_date'))
+                    self.library_tree.insert('', 'end', values=(
+                        video.get('title', 'Sem título'),
+                        video.get('uploader', 'Desconhecido'),
+                        '',
+                        duration,
+                        upload_date,
+                        video.get('file_path', ''),
+                        video.get('video_id', '')
+                    ), tags=('video',))
+            else:
+                # Modo árvore: filtra playlists e filhos
+                self._tree_search_term = search_term if search_term else None
+                playlists = []
+                try:
+                    playlists = self.video_queries.list_playlists()
+                except Exception as e:
+                    self.log(f"⚠ Não foi possível listar playlists: {e}")
+
+                def matches(text: str) -> bool:
+                    return bool(search_term) and text and (search_term.lower() in text.lower())
+
+                filtered = []
+                for pl in playlists:
+                    pl_id = pl.get('id') or pl.get('video_id')
+                    title = pl.get('title', '')
+                    uploader = pl.get('uploader', '')
+                    playlist_matches = matches(title) or matches(uploader)
+                    child_matches = False
+                    try:
+                        children = self.video_queries.get_playlist_children(pl_id) if pl_id else []
+                        for ch in children:
+                            if matches(ch.get('title', '')) or matches(ch.get('uploader', '')):
+                                child_matches = True
+                                break
+                    except Exception:
+                        pass
+                    if not search_term:
+                        filtered.append((pl, 0))
+                    else:
+                        if playlist_matches or child_matches:
+                            filtered.append((pl, 1))
+                # Inserir playlists filtradas
+                for pl, _ in filtered:
+                    pl_id = pl.get('id') or pl.get('video_id')
+                    title = pl.get('title', 'Playlist sem título')
+                    uploader = pl.get('uploader', 'Desconhecido')
+                    # Contagem total de filhos
+                    count = 0
+                    try:
+                        if pl_id:
+                            count = self.video_queries.count_playlist_children(pl_id)
+                    except Exception:
+                        pass
+                    display_title = f"{title} ({count} vídeos)" if count else title
+                    parent_iid = self.library_tree.insert('', 'end', text='📃', values=(
+                        display_title,
+                        uploader,
+                        '',
+                        '',
+                        '',
+                        '',
+                        pl_id or ''
+                    ), tags=('playlist',))
+                    # Placeholder para expansão filtrada
+                    self.library_tree.insert(parent_iid, 'end', text='⏳ Carregando...', values=('', '', '', '', '', ''), tags=('placeholder',))
+
+        except Exception as e:
+            self.log(f"❌ Erro na busca: {str(e)}")
+
+    def on_search_changed(self, event):
+        """
+        Callback para mudanças no campo de busca (busca em tempo real)
+        """
+        # Busca automática após 500ms de inatividade
+        if hasattr(self, '_search_timer'):
+            self.root.after_cancel(self._search_timer)
+        
+        self._search_timer = self.root.after(500, self.search_videos)
+
+    def on_library_node_open(self, event):
+        """
+        Expande um nó de playlist no modo árvore e carrega seus vídeos filhos sob demanda.
+        
+        Este método identifica se o item expandido é uma playlist e, caso haja
+        um placeholder, busca os filhos no banco via `VideoQueries.get_playlist_children`
+        e popula o Treeview com os vídeos.
+        """
+        try:
+            mode = getattr(self, 'library_view_mode', None)
+            is_tree_mode = (mode.get() == 'árvore') if mode else False
+            if not is_tree_mode:
+                return
+
+            item = self.library_tree.focus()
+            if not item:
+                return
+
+            tags = self.library_tree.item(item, 'tags') or []
+            if 'playlist' not in tags:
+                return
+
+            # Remover placeholder se presente e carregar filhos
+            children = self.library_tree.get_children(item)
+            has_placeholder = False
+            for ch in children:
+                ch_tags = self.library_tree.item(ch, 'tags') or []
+                if 'placeholder' in ch_tags:
+                    has_placeholder = True
+                    break
+
+            if not has_placeholder:
+                # Já populado anteriormente
+                return
+
+            # Limpar placeholders
+            for ch in children:
+                self.library_tree.delete(ch)
+
+            # Resolver ID da playlist a partir da coluna oculta 'id'
+            values = self.library_tree.item(item, 'values')
+            playlist_id = values[6] if values and len(values) > 6 else None
+
+            if not hasattr(self, 'video_queries') or not self.video_queries:
+                self.log("⚠ Sistema de banco de dados não inicializado")
+                return
+
+            # Buscar vídeos filhos da playlist
+            children_videos = []
+            try:
+                if playlist_id:
+                    children_videos = self.video_queries.get_playlist_children(playlist_id)
+                else:
+                    children_videos = []
+            except Exception as e:
+                self.log(f"❌ Erro ao obter vídeos da playlist: {e}")
+                return
+
+            # Aplicar filtro, se houver termo de busca em modo árvore
+            search_term = getattr(self, '_tree_search_term', None)
+            def matches(text: str) -> bool:
+                return bool(search_term) and text and (search_term.lower() in text.lower())
+            if search_term:
+                children_videos = [
+                    vid for vid in children_videos
+                    if matches(vid.get('title', '')) or matches(vid.get('uploader', ''))
+                ]
+
+            # Inserir vídeos filhos
+            for vid in children_videos:
+                duration = self._format_duration(vid.get('duration'))
+                upload_date = ''  # Não disponível nesta consulta
+                vid_id = vid.get('video_id')
+                position = vid.get('position') if vid.get('position') is not None else ''
+                self.library_tree.insert(item, 'end', text='🎬', values=(
+                    vid.get('title', 'Sem título'),
+                    vid.get('uploader', 'Desconhecido'),
+                    position,
+                    duration,
+                    upload_date,
+                    '',  # file_path não é retornado nesta consulta
+                    vid_id or ''
+                ), tags=('video',))
+
+            self.log(f"📂 Playlist expandida: {len(children_videos)} vídeos carregados")
+
+        except Exception as e:
+            self.log(f"❌ Erro ao expandir playlist: {str(e)}")
+
+    def on_video_double_click(self, event):
+        """
+        Callback para duplo clique em um vídeo (abre o arquivo)
+        """
+        try:
+            # No modo árvore, double-click em playlists deve apenas expandir
+            mode = getattr(self, 'library_view_mode', None)
+            is_tree_mode = (mode.get() == 'árvore') if mode else False
+            if is_tree_mode:
+                item = self.library_tree.focus()
+                if item:
+                    tags = self.library_tree.item(item, 'tags') or []
+                    if 'playlist' in tags:
+                        # Deixa a expansão padrão do Treeview acontecer
+                        return
+            # Para vídeos: tenta abrir arquivo; se não houver caminho, mostra detalhes
+            item = self.library_tree.focus()
+            if not item:
+                return
+            values = self.library_tree.item(item, 'values') or []
+            tags = self.library_tree.item(item, 'tags') or []
+            if 'video' not in tags:
+                return
+            file_path = values[5] if len(values) > 5 else ''
+            if file_path and os.path.exists(file_path):
+                self.open_video_file()
+            else:
+                self.show_video_details()
+        except Exception:
+            # Fallback para comportamento padrão
+            self.open_video_file()
+
+    def show_library_context_menu(self, event):
+        """
+        Mostra o menu de contexto da biblioteca
+        """
+        try:
+            # Selecionar item clicado
+            item = self.library_tree.identify_row(event.y)
+            if item:
+                self.library_tree.selection_set(item)
+                self.library_context_menu.post(event.x_root, event.y_root)
+        except Exception as e:
+            self.log(f"❌ Erro ao mostrar menu de contexto: {str(e)}")
+
+    def open_video_file(self):
+        """
+        Abre o arquivo de vídeo selecionado
+        """
+        try:
+            selection = self.library_tree.selection()
+            if not selection:
+                return
+
+            item = selection[0]
+            values = self.library_tree.item(item, 'values')
+            file_path = values[5] if len(values) > 5 else ''
+
+            # Evitar tentar abrir playlists no modo árvore
+            tags = self.library_tree.item(item, 'tags') or []
+            if 'playlist' in tags:
+                return
+
+            if file_path and os.path.exists(file_path):
+                os.startfile(file_path)
+                self.log(f"📂 Abrindo arquivo: {os.path.basename(file_path)}")
+            else:
+                self.log("❌ Arquivo não encontrado")
+
+        except Exception as e:
+            self.log(f"❌ Erro ao abrir arquivo: {str(e)}")
+
+    def open_video_folder(self):
+        """
+        Abre a pasta contendo o arquivo de vídeo selecionado
+        """
+        try:
+            selection = self.library_tree.selection()
+            if not selection:
+                return
+
+            item = selection[0]
+            values = self.library_tree.item(item, 'values')
+            file_path = values[5] if len(values) > 5 else ''
+
+            if file_path and os.path.exists(file_path):
+                folder_path = os.path.dirname(file_path)
+                os.startfile(folder_path)
+                self.log(f"📁 Abrindo pasta: {folder_path}")
+            else:
+                self.log("❌ Arquivo não encontrado")
+
+        except Exception as e:
+            self.log(f"❌ Erro ao abrir pasta: {str(e)}")
+
+    def copy_video_url(self):
+        """
+        Copia a URL original do vídeo para a área de transferência
+        """
+        try:
+            selection = self.library_tree.selection()
+            if not selection:
+                return
+
+            item = selection[0]
+            values = self.library_tree.item(item, 'values')
+            title = values[0] if len(values) > 0 else ''
+            tags = self.library_tree.item(item, 'tags') or []
+            if 'playlist' in tags:
+                self.log("⚠ Item é uma playlist, não possui URL de vídeo único")
+                return
+
+            if not hasattr(self, 'video_queries') or not self.video_queries:
+                self.log("⚠ Sistema de banco de dados não inicializado")
+                return
+
+            # Buscar URL no banco de dados
+            video_id = values[6] if len(values) > 6 else None
+            url = None
+            if video_id and hasattr(self.video_queries, 'get_video_url'):
+                try:
+                    url = self.video_queries.get_video_url(video_id)
+                except Exception as e:
+                    self.log(f"⚠ Falha ao obter URL por ID, tentando por título: {e}")
+            if not url:
+                video = self.video_queries.get_video_by_title(title)
+                if video:
+                    url = video.get('url') or video.get('webpage_url')
+            if url:
+                self.root.clipboard_clear()
+                self.root.clipboard_append(url)
+                self.log(f"📋 URL copiada: {url}")
+            else:
+                self.log("❌ URL não encontrada")
+
+        except Exception as e:
+            self.log(f"❌ Erro ao copiar URL: {str(e)}")
+
+    def show_video_details(self):
+        """
+        Mostra uma janela com detalhes completos do vídeo
+        """
+        try:
+            selection = self.library_tree.selection()
+            if not selection:
+                return
+
+            item = selection[0]
+            values = self.library_tree.item(item, 'values')
+            title = values[0] if len(values) > 0 else ''
+            tags = self.library_tree.item(item, 'tags') or []
+            if 'playlist' in tags:
+                self.log("⚠ Item é uma playlist. Detalhes específicos de playlist serão adicionados futuramente.")
+                return
+
+            if not hasattr(self, 'video_queries') or not self.video_queries:
+                self.log("⚠ Sistema de banco de dados não inicializado")
+                return
+
+            # Buscar detalhes completos no banco de dados
+            video_id = values[6] if len(values) > 6 else None
+            video = None
+            if video_id and hasattr(self.video_queries, 'get_video_by_id'):
+                try:
+                    video = self.video_queries.get_video_by_id(video_id)
+                except Exception as e:
+                    self.log(f"⚠ Falha ao obter detalhes por ID, tentando por título: {e}")
+            if not video:
+                video = self.video_queries.get_video_by_title(title)
+            if video:
+                self._show_video_details_window(video)
+            else:
+                self.log("❌ Detalhes do vídeo não encontrados")
+
+        except Exception as e:
+            self.log(f"❌ Erro ao mostrar detalhes: {str(e)}")
+
+    def remove_from_library(self):
+        """
+        Remove o vídeo selecionado da biblioteca (apenas do banco de dados)
+        """
+        try:
+            selection = self.library_tree.selection()
+            if not selection:
+                return
+
+            item = selection[0]
+            values = self.library_tree.item(item, 'values')
+            title = values[0] if len(values) > 0 else ''
+
+            # Confirmar remoção
+            result = messagebox.askyesno(
+                "Confirmar Remoção",
+                f"Deseja remover '{title}' da biblioteca?\n\n"
+                "Nota: O arquivo não será deletado, apenas removido da biblioteca."
+            )
+
+            if result and hasattr(self, 'video_queries') and self.video_queries:
+                # Buscar ID do vídeo
+                video = self.video_queries.get_video_by_title(title)
+                if video and video.get('id'):
+                    self.video_queries.delete_video(video['id'])
+                    self.library_tree.delete(item)
+                    self.log(f"🗑️ Vídeo removido da biblioteca: {title}")
+                else:
+                    self.log("❌ Vídeo não encontrado no banco de dados")
+
+        except Exception as e:
+            self.log(f"❌ Erro ao remover da biblioteca: {str(e)}")
+
+    def _show_video_details_window(self, video):
+        """
+        Mostra uma janela popup com detalhes completos do vídeo
+        """
+        try:
+            # Criar janela de detalhes
+            details_window = tk.Toplevel(self.root)
+            details_window.title(f"Detalhes - {video.get('title', 'Sem título')}")
+            details_window.geometry("600x500")
+            details_window.resizable(True, True)
+
+            # Frame principal com scroll
+            main_frame = ttk.Frame(details_window)
+            main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+            # Área de texto com scroll para os detalhes
+            details_text = scrolledtext.ScrolledText(main_frame, wrap=tk.WORD, height=25, width=70)
+            details_text.pack(fill=tk.BOTH, expand=True)
+
+            # Formatar e inserir detalhes
+            details = self._format_video_details(video)
+            details_text.insert(tk.END, details)
+            details_text.config(state=tk.DISABLED)
+
+            # Frame para botões
+            button_frame = ttk.Frame(main_frame)
+            button_frame.pack(fill=tk.X, pady=(10, 0))
+
+            # Botão para fechar
+            ttk.Button(button_frame, text="Fechar", command=details_window.destroy).pack(side=tk.RIGHT)
+
+            # Botão para abrir arquivo (se existir)
+            if video.get('file_path') and os.path.exists(video['file_path']):
+                ttk.Button(
+                    button_frame, 
+                    text="📂 Abrir Arquivo", 
+                    command=lambda: os.startfile(video['file_path'])
+                ).pack(side=tk.RIGHT, padx=(0, 10))
+
+        except Exception as e:
+            self.log(f"❌ Erro ao mostrar janela de detalhes: {str(e)}")
+
+    def _format_video_details(self, video):
+        """
+        Formata os detalhes do vídeo para exibição
+        """
+        details = []
+        details.append("=" * 60)
+        details.append("DETALHES DO VÍDEO")
+        details.append("=" * 60)
+        details.append("")
+
+        # Informações básicas
+        details.append(f"📺 Título: {video.get('title', 'N/A')}")
+        details.append(f"👤 Canal: {video.get('uploader', 'N/A')}")
+        details.append(f"🔗 URL: {video.get('url', 'N/A')}")
+        details.append(f"📅 Data de Upload: {self._format_upload_date(video.get('upload_date'))}")
+        details.append(f"⏱️ Duração: {self._format_duration(video.get('duration_seconds'))}")
+        details.append(f"👀 Visualizações: {video.get('view_count', 'N/A')}")
+        details.append("")
+
+        # Informações técnicas
+        details.append("🔧 INFORMAÇÕES TÉCNICAS")
+        details.append("-" * 30)
+        details.append(f"📁 Arquivo: {video.get('file_path', 'N/A')}")
+        details.append(f"📏 Resolução: {video.get('width', 'N/A')}x{video.get('height', 'N/A')}")
+        details.append(f"🎞️ FPS: {video.get('fps', 'N/A')}")
+        details.append(f"🎵 Codec de Áudio: {video.get('acodec', 'N/A')}")
+        details.append(f"🎬 Codec de Vídeo: {video.get('vcodec', 'N/A')}")
+        details.append(f"📊 Formato: {video.get('ext', 'N/A')}")
+        details.append("")
+
+        # Descrição
+        if video.get('description'):
+            details.append("📝 DESCRIÇÃO")
+            details.append("-" * 30)
+            description = video['description'][:500]  # Limitar a 500 caracteres
+            if len(video['description']) > 500:
+                description += "..."
+            details.append(description)
+            details.append("")
+
+        # Tags
+        if video.get('tags'):
+            details.append("🏷️ TAGS")
+            details.append("-" * 30)
+            tags = video['tags']
+            if isinstance(tags, list):
+                details.append(", ".join(tags[:10]))  # Mostrar apenas as primeiras 10 tags
+            else:
+                details.append(str(tags))
+            details.append("")
+
+        # Informações de download
+        details.append("📥 INFORMAÇÕES DE DOWNLOAD")
+        details.append("-" * 30)
+        details.append(f"📅 Baixado em: {video.get('download_date', 'N/A')}")
+        details.append(f"💾 Tamanho do arquivo: {self._format_file_size(video.get('file_path'))}")
+
+        return "\n".join(details)
+
+    def _format_duration(self, duration_seconds):
+        """
+        Formata duração em segundos para formato legível
+        """
+        if not duration_seconds:
+            return "N/A"
+        
+        try:
+            duration = int(duration_seconds)
+            hours = duration // 3600
+            minutes = (duration % 3600) // 60
+            seconds = duration % 60
+            
+            if hours > 0:
+                return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            else:
+                return f"{minutes:02d}:{seconds:02d}"
+        except:
+            return "N/A"
+
+    def _format_upload_date(self, upload_date):
+        """
+        Formata data de upload para formato legível
+        """
+        if not upload_date:
+            return "N/A"
+        
+        try:
+            if isinstance(upload_date, str) and len(upload_date) == 8:
+                # Formato YYYYMMDD
+                year = upload_date[:4]
+                month = upload_date[4:6]
+                day = upload_date[6:8]
+                return f"{day}/{month}/{year}"
+            else:
+                return str(upload_date)
+        except:
+            return "N/A"
+
+    def _format_file_size(self, file_path):
+        """
+        Formata o tamanho do arquivo para formato legível
+        """
+        if not file_path or not os.path.exists(file_path):
+            return "N/A"
+        
+        try:
+            size = os.path.getsize(file_path)
+            for unit in ['B', 'KB', 'MB', 'GB']:
+                if size < 1024.0:
+                    return f"{size:.1f} {unit}"
+                size /= 1024.0
+            return f"{size:.1f} TB"
+        except:
+            return "N/A"
+    
+    def start_thermal_monitoring(self):
+        """
+        Inicia o monitoramento térmico do HD em thread separada
+        """
+        def thermal_monitor():
+            while True:
+                try:
+                    # Obter status térmico do HD do queue_manager
+                    if hasattr(self, 'queue_manager') and self.queue_manager:
+                        thermal_status = self.queue_manager.get_hd_thermal_status()
+                        
+                        # Atualizar indicador visual na thread principal
+                        self.root.after(0, self.update_thermal_indicator, thermal_status)
+                    
+                    # Aguardar 15 segundos antes da próxima verificação
+                    time.sleep(15)
+                    
+                except Exception as e:
+                    print(f"Erro no monitoramento térmico: {e}")
+                    time.sleep(30)  # Aguardar mais tempo em caso de erro
+        
+        # Iniciar thread de monitoramento
+        thermal_thread = threading.Thread(target=thermal_monitor, daemon=True)
+        thermal_thread.start()
+    
+    def update_thermal_indicator(self, thermal_status):
+        """
+        Atualiza o indicador visual de temperatura do HD
+        
+        Args:
+            thermal_status: Dicionário com informações térmicas do HD
+        """
+        try:
+            if not hasattr(self, 'hd_thermal_label'):
+                return
+            
+            # Verificar se o monitoramento está ativo
+            if not thermal_status.get("monitoring_enabled", False):
+                self.hd_thermal_label.config(
+                    text="🌡️ HD: Desabilitado",
+                    foreground="gray"
+                )
+                return
+            
+            # Obter temperatura máxima dos HDs
+            temperatures = thermal_status.get("temperatures", {})
+            if not temperatures:
+                self.hd_thermal_label.config(
+                    text="🌡️ HD: --°C",
+                    foreground="gray"
+                )
+                return
+            
+            # Encontrar temperatura máxima (corrigindo comparação de dicionários)
+            max_temp = 0
+            max_drive = None
+            
+            for drive, drive_info in temperatures.items():
+                # drive_info pode ser um dicionário ou um valor numérico
+                if isinstance(drive_info, dict):
+                    temp = drive_info.get("temperature")
+                else:
+                    temp = drive_info
+                
+                if temp is not None and temp > max_temp:
+                    max_temp = temp
+                    max_drive = drive
+            
+            # Obter limites de temperatura
+            warning_threshold = thermal_status.get("warning_threshold", 50)
+            critical_threshold = thermal_status.get("critical_threshold", 60)
+            
+            # Determinar cor e ícone baseado na temperatura
+            if max_temp >= critical_threshold:
+                color = "red"
+                icon = "🔥"
+                status_text = "CRÍTICO"
+            elif max_temp >= warning_threshold:
+                color = "orange"
+                icon = "⚠️"
+                status_text = "AVISO"
+            else:
+                color = "green"
+                icon = "🌡️"
+                status_text = "OK"
+            
+            # Verificar se a proteção térmica está ativa
+            is_paused = thermal_status.get("thermal_protection_active", False)
+            if is_paused:
+                icon = "⏸️"
+                status_text = "PAUSADO"
+                color = "red"
+            
+            # Atualizar label
+            text = f"{icon} HD: {max_temp:.1f}°C ({status_text})"
+            self.hd_thermal_label.config(text=text, foreground=color)
+            
+            # Criar tooltip com informações detalhadas
+            tooltip_text = f"Temperatura dos HDs:\n"
+            for drive, drive_info in temperatures.items():
+                # drive_info pode ser um dicionário ou um valor numérico
+                if isinstance(drive_info, dict):
+                    temp = drive_info.get("temperature")
+                    status = drive_info.get("status", "unknown")
+                    if temp is not None:
+                        tooltip_text += f"• {drive}: {temp:.1f}°C ({status})\n"
+                    else:
+                        tooltip_text += f"• {drive}: N/A ({status})\n"
+                else:
+                    temp = drive_info
+                    if temp is not None:
+                        tooltip_text += f"• {drive}: {temp:.1f}°C\n"
+                    else:
+                        tooltip_text += f"• {drive}: N/A\n"
+            tooltip_text += f"\nLimites:\n"
+            tooltip_text += f"• Aviso: {warning_threshold}°C\n"
+            tooltip_text += f"• Crítico: {critical_threshold}°C"
+            
+            if is_paused:
+                tooltip_text += f"\n\n⚠️ Conversões pausadas por proteção térmica"
+            
+            # Configurar tooltip (implementação simples)
+            self.hd_thermal_label.bind("<Enter>", lambda e: self.show_thermal_tooltip(e, tooltip_text))
+            self.hd_thermal_label.bind("<Leave>", lambda e: self.hide_thermal_tooltip())
+            
+        except Exception as e:
+            print(f"Erro ao atualizar indicador térmico: {e}")
+            self.hd_thermal_label.config(
+                text="🌡️ HD: Erro",
+                foreground="red"
+            )
+    
+    def show_thermal_tooltip(self, event, text):
+        """
+        Mostra tooltip com informações térmicas detalhadas
+        """
+        try:
+            # Criar janela de tooltip
+            self.thermal_tooltip = tk.Toplevel(self.root)
+            self.thermal_tooltip.wm_overrideredirect(True)
+            self.thermal_tooltip.wm_geometry(f"+{event.x_root+10}+{event.y_root+10}")
+            
+            # Adicionar texto do tooltip
+            label = tk.Label(
+                self.thermal_tooltip,
+                text=text,
+                background="lightyellow",
+                relief="solid",
+                borderwidth=1,
+                font=("Arial", 9),
+                justify="left"
+            )
+            label.pack()
+            
+        except Exception as e:
+            print(f"Erro ao mostrar tooltip térmico: {e}")
+    
+    def hide_thermal_tooltip(self):
+        """
+        Esconde tooltip térmico
+        """
+        try:
+            if hasattr(self, 'thermal_tooltip'):
+                self.thermal_tooltip.destroy()
+                delattr(self, 'thermal_tooltip')
+        except Exception as e:
+            print(f"Erro ao esconder tooltip térmico: {e}")
+    
+    def on_closing(self):
+        """
+        CORREÇÃO CRÍTICA: Método chamado quando a aplicação está sendo fechada
+        Para todos os processos de forma segura para evitar superaquecimento
+        """
+        try:
+            self.log("🛑 Fechando aplicação - parando todos os processos...")
+            
+            # Parar verificação periódica de atualizações (CRÍTICO!)
+            if hasattr(self, 'update_checker') and self.update_checker:
+                self.log("🛑 Parando verificação de atualizações...")
+                self.update_checker.stop_periodic_check()
+            
+            # Parar UpdateWidget
+            if hasattr(self, 'update_widget') and self.update_widget:
+                self.log("🛑 Parando widget de atualização...")
+                self.update_widget.destroy()
+            
+            # Parar conversões em andamento
+            if hasattr(self, 'queue_manager') and self.queue_manager:
+                self.log("🛑 Parando conversões em andamento...")
+                self.queue_manager.stop_all_conversions()
+            
+            # Parar monitoramento térmico
+            if hasattr(self, 'thermal_tooltip'):
+                self.thermal_tooltip.destroy()
+            
+            # Fechar banco de dados
+            if hasattr(self, 'db') and self.db:
+                self.log("🛑 Fechando banco de dados...")
+                self.db.close()
+            
+            self.log("✅ Todos os processos foram parados com segurança")
+            
+        except Exception as e:
+            print(f"Erro ao fechar aplicação: {e}")
+        finally:
+            # Fechar a aplicação
+            self.root.destroy()
 
 
 def main():
