@@ -440,6 +440,15 @@ HARDWARE_MONITORING = {
     "temperature_warning_threshold": 85,  # °C
     "memory_warning_threshold": 0.9,  # 90% da memória GPU
     "enable_performance_logging": True,
+    
+    # Configurações de monitoramento térmico de HD/SSD
+    "enable_hd_thermal_monitoring": True,  # Habilitar monitoramento térmico de HD
+    "hd_thermal_check_interval": 30.0,  # Intervalo de verificação térmica de HD (segundos)
+    "hd_temp_warning_threshold": 50,  # °C - Limite de aviso para temperatura de HD
+    "hd_temp_critical_threshold": 60,  # °C - Limite crítico para temperatura de HD
+    "hd_thermal_protection": True,  # Pausar operações se HD superaquecer
+    "hd_thermal_cooldown_time": 120,  # Tempo de espera após superaquecimento (segundos)
+    "hd_thermal_cache_duration": 60,  # Cache de leituras térmicas (segundos)
 }
 
 # Configurações do FFmpeg

@@ -327,6 +327,46 @@ class OSDetector:
 
         return None
 
+    def is_windows(self) -> bool:
+        """
+        Verifica se o sistema operacional é Windows
+        
+        Returns:
+            bool: True se for Windows
+        """
+        os_info = self.detect()
+        return os_info.name == "windows"
+    
+    def is_linux(self) -> bool:
+        """
+        Verifica se o sistema operacional é Linux
+        
+        Returns:
+            bool: True se for Linux
+        """
+        os_info = self.detect()
+        return os_info.name == "linux"
+    
+    def is_macos(self) -> bool:
+        """
+        Verifica se o sistema operacional é macOS
+        
+        Returns:
+            bool: True se for macOS
+        """
+        os_info = self.detect()
+        return os_info.name == "darwin"
+    
+    def get_os_type(self) -> str:
+        """
+        Retorna o tipo do sistema operacional
+        
+        Returns:
+            str: Nome do sistema operacional (windows, linux, darwin)
+        """
+        os_info = self.detect()
+        return os_info.name
+
     def get_summary(self) -> Dict:
         """
         Retorna resumo completo das informações do sistema

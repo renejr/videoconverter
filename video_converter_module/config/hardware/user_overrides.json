@@ -1,0 +1,9 @@
+{
+  "global": {
+    "preferred_encoder": "h264_nvenc",
+    "max_concurrent_jobs": 6
+  },
+  "mid_range": {
+    "preset": "medium"
+  }
+}

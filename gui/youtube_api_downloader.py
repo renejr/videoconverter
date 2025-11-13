@@ -227,9 +227,11 @@ class YouTubeAPIDownloader:
         self._apply_rate_limiting()
         self._update_session_headers()
         
+        method = kwargs.pop('method', 'GET')
+        
         # Tenta primeiro sem proxy
         try:
-            response = self.session.get(url, timeout=10, **kwargs)
+            response = self.session.request(method, url, timeout=10, **kwargs)
             if response.status_code == 200:
                 return response
         except Exception as e:
@@ -240,7 +242,7 @@ class YouTubeAPIDownloader:
         if proxy:
             try:
                 print("Tentando com proxy...")
-                response = self.session.get(url, proxies=proxy, timeout=15, **kwargs)
+                response = self.session.request(method, url, proxies=proxy, timeout=15, **kwargs)
                 if response.status_code == 200:
                     return response
             except Exception as e:

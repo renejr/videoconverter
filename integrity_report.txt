@@ -1,0 +1,570 @@
+============================================================
+🛡️  RELATÓRIO DE INTEGRIDADE DO CÓDIGO
+============================================================
+📅 Data: 2025-11-10T01:09:32.881230
+📁 Projeto: E:\pyProjs\vidconv
+📄 Arquivos verificados: 175
+⚠️  Arquivos com problemas: 80
+🔢 Total de problemas: 922
+
+📊 RESUMO POR TIPO:
+  • Duplicate Methods: 45
+  • Duplicate Imports: 35
+  • Duplicate Blocks: 842
+
+📋 DETALHES POR ARQUIVO:
+
+📄 fix_duplications.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 16-47)
+
+📄 test_complete.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 26-73)
+    - Bloco duplicado (linhas 27-74)
+    - Bloco duplicado (linhas 28-75)
+    ... e mais 2 problemas
+
+📄 test_database_system.py:
+  🔸 Duplicate Imports:
+    - import shutil (linhas 211, 276)
+
+📄 test_pywebview.py:
+  🔸 Duplicate Imports:
+    - import webview (linhas 7, 331)
+    - import sys (linhas 11, 337)
+
+📄 database\metadata_extractor.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 40-88)
+    - Bloco duplicado (linhas 41-89)
+
+📄 database\storyboard_downloader.py:
+  🔸 Duplicate Imports:
+    - import shutil (linhas 548, 552)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 148-347)
+    - Bloco duplicado (linhas 149-348)
+    - Bloco duplicado (linhas 348-387)
+    ... e mais 2 problemas
+
+📄 database\video_metadata_db.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 135-277)
+    - Bloco duplicado (linhas 376-411)
+    - Bloco duplicado (linhas 377-412)
+    ... e mais 19 problemas
+
+📄 database\video_queries.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 60-138)
+    - Bloco duplicado (linhas 138-174)
+    - Bloco duplicado (linhas 139-247)
+    ... e mais 15 problemas
+
+📄 database\__init__.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 51-71)
+    - Bloco duplicado (linhas 71-117)
+
+📄 gui\main_window_tkinter.py:
+  🔸 Duplicate Methods:
+    - def update_gui(): (linhas 115, 142)
+    - def update_gui(): (linhas 115, 2350)
+    - def update_gui(): (linhas 115, 2383)
+    ... e mais 11 problemas
+  🔸 Duplicate Imports:
+    - from datetime import datetime (linhas 118, 145)
+    - import random (linhas 13, 765)
+    - import re (linhas 14, 1057)
+    ... e mais 4 problemas
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 128-155)
+    - Bloco duplicado (linhas 129-156)
+    - Bloco duplicado (linhas 130-157)
+    ... e mais 110 problemas
+
+📄 gui\youtube_api_downloader.py:
+  🔸 Duplicate Methods:
+    - def __init__(self): (linhas 67, 142)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 567-615)
+    - Bloco duplicado (linhas 708-769)
+    - Bloco duplicado (linhas 709-770)
+    ... e mais 1 problemas
+
+📄 installer\demo.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 75-218)
+    - Bloco duplicado (linhas 76-165)
+    - Bloco duplicado (linhas 165-219)
+    ... e mais 2 problemas
+
+📄 installer\main_installer.py:
+  🔸 Duplicate Imports:
+    - import subprocess (linhas 721, 739)
+    - import time (linhas 25, 740)
+    - import subprocess (linhas 721, 761)
+    ... e mais 2 problemas
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 216-319)
+    - Bloco duplicado (linhas 217-320)
+    - Bloco duplicado (linhas 223-329)
+    ... e mais 13 problemas
+
+📄 installer\test_installer.py:
+  🔸 Duplicate Methods:
+    - def setUp(self): (linhas 43, 80)
+    - def setUp(self): (linhas 43, 121)
+    - def setUp(self): (linhas 43, 157)
+    ... e mais 9 problemas
+  🔸 Duplicate Imports:
+    - from main_installer import InstallationResult (linhas 301, 345)
+
+📄 installer\config\settings.py:
+  🔸 Duplicate Methods:
+    - def __post_init__(self): (linhas 30, 53)
+    - def __post_init__(self): (linhas 30, 83)
+    - def __post_init__(self): (linhas 30, 122)
+
+📄 installer\core\cuda_installer.py:
+  🔸 Duplicate Imports:
+    - import sys (linhas 15, 36)
+    - from pathlib import Path (linhas 22, 37)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 304-850)
+    - Bloco duplicado (linhas 305-851)
+    - Bloco duplicado (linhas 306-852)
+    ... e mais 22 problemas
+
+📄 installer\core\ffmpeg_manager.py:
+  🔸 Duplicate Imports:
+    - import sys (linhas 15, 38)
+    - from pathlib import Path (linhas 24, 39)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 214-291)
+    - Bloco duplicado (linhas 313-346)
+    - Bloco duplicado (linhas 314-347)
+    ... e mais 28 problemas
+
+📄 installer\core\gpu_detector.py:
+  🔸 Duplicate Imports:
+    - import sys (linhas 15, 28)
+    - from pathlib import Path (linhas 21, 29)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 173-247)
+    - Bloco duplicado (linhas 210-299)
+    - Bloco duplicado (linhas 211-300)
+    ... e mais 8 problemas
+
+📄 installer\core\python_manager.py:
+  🔸 Duplicate Imports:
+    - import urllib (linhas 17, 18)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 151-163)
+    - Bloco duplicado (linhas 152-164)
+    - Bloco duplicado (linhas 153-165)
+    ... e mais 10 problemas
+
+📄 installer\utils\downloader.py:
+  🔸 Duplicate Imports:
+    - import urllib (linhas 19, 20)
+    - import urllib (linhas 19, 21)
+
+📄 installer\utils\logger.py:
+  🔸 Duplicate Methods:
+    - def format(self, record): (linhas 63, 88)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 285-298)
+
+📄 installer\utils\progress.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 131-373)
+
+📄 notification_service\main.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 251-290)
+    - Bloco duplicado (linhas 252-291)
+    - Bloco duplicado (linhas 253-292)
+
+📄 notification_service\main_with_consumer.py:
+  🔸 Duplicate Imports:
+    - import time (linhas 238, 270)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 232-263)
+    - Bloco duplicado (linhas 233-264)
+    - Bloco duplicado (linhas 254-296)
+
+📄 notification_service\events\bus.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 80-209)
+    - Bloco duplicado (linhas 203-224)
+    - Bloco duplicado (linhas 209-230)
+    ... e mais 1 problemas
+
+📄 notification_service\events\handlers.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 188-207)
+    - Bloco duplicado (linhas 189-208)
+    - Bloco duplicado (linhas 207-225)
+    ... e mais 19 problemas
+
+📄 notification_service\events\user_handlers.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 73-97)
+    - Bloco duplicado (linhas 74-98)
+    - Bloco duplicado (linhas 97-125)
+    ... e mais 11 problemas
+
+📄 notification_service\event_handlers\user_handlers.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 34-75)
+    - Bloco duplicado (linhas 35-76)
+    - Bloco duplicado (linhas 36-77)
+    ... e mais 74 problemas
+
+📄 notification_service\services\email_service.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 231-492)
+    - Bloco duplicado (linhas 303-325)
+    - Bloco duplicado (linhas 373-395)
+    ... e mais 11 problemas
+
+📄 tests\test_playlist_handling.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 32-51)
+    - Bloco duplicado (linhas 33-52)
+
+📄 tests\test_youtube_download_e2e_complete.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 245-352)
+
+📄 user_service\main.py:
+  🔸 Duplicate Imports:
+    - import time (linhas 15, 159)
+
+📄 user_service\test_api_endpoints.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 134-167)
+    - Bloco duplicado (linhas 141-322)
+
+📄 user_service\test_event_bus_simple.py:
+  🔸 Duplicate Imports:
+    - import traceback (linhas 52, 100)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 52-100)
+
+📄 user_service\test_event_integration.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 85-119)
+    - Bloco duplicado (linhas 119-153)
+
+📄 user_service\test_registration_edge_cases.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 78-165)
+    - Bloco duplicado (linhas 79-166)
+    - Bloco duplicado (linhas 108-133)
+    ... e mais 11 problemas
+
+📄 user_service\test_registration_simple.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 19-56)
+    - Bloco duplicado (linhas 29-66)
+
+📄 user_service\test_user_registration.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 51-331)
+    - Bloco duplicado (linhas 67-137)
+    - Bloco duplicado (linhas 69-83)
+    ... e mais 4 problemas
+
+📄 user_service\api\dependencies.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 166-187)
+    - Bloco duplicado (linhas 187-208)
+
+📄 user_service\api\exceptions.py:
+  🔸 Duplicate Methods:
+    - def __init__(self): (linhas 61, 73)
+    - def __init__(self): (linhas 61, 84)
+    - def __init__(self): (linhas 61, 110)
+    ... e mais 2 problemas
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 198-314)
+    - Bloco duplicado (linhas 199-315)
+    - Bloco duplicado (linhas 200-316)
+    ... e mais 5 problemas
+
+📄 user_service\api\v1\endpoints\auth.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 93-145)
+    - Bloco duplicado (linhas 115-153)
+    - Bloco duplicado (linhas 116-154)
+    ... e mais 3 problemas
+
+📄 user_service\api\v1\endpoints\users.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 144-184)
+    - Bloco duplicado (linhas 184-244)
+    - Bloco duplicado (linhas 356-388)
+
+📄 user_service\events\publisher.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 88-168)
+    - Bloco duplicado (linhas 95-134)
+    - Bloco duplicado (linhas 107-148)
+    ... e mais 9 problemas
+
+📄 user_service\events\schemas.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 50-97)
+    - Bloco duplicado (linhas 51-98)
+    - Bloco duplicado (linhas 52-99)
+    ... e mais 27 problemas
+
+📄 user_service\models\payment.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 417-444)
+    - Bloco duplicado (linhas 418-445)
+    - Bloco duplicado (linhas 419-446)
+    ... e mais 2 problemas
+
+📄 user_service\models\__init__.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 112-125)
+
+📄 user_service\schemas\auth.py:
+  🔸 Duplicate Methods:
+    - def passwords_match(cls, v, values): (linhas 182, 231)
+    - def validate_new_password(cls, v): (linhas 227, 280)
+    - def passwords_match(cls, v, values): (linhas 182, 284)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 18-118)
+    - Bloco duplicado (linhas 19-119)
+    - Bloco duplicado (linhas 20-119)
+    ... e mais 22 problemas
+
+📄 user_service\schemas\base.py:
+  🔸 Duplicate Imports:
+    - import re (linhas 316, 337)
+    - import re (linhas 316, 377)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 333-373)
+    - Bloco duplicado (linhas 334-374)
+
+📄 user_service\schemas\invoice.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 73-229)
+    - Bloco duplicado (linhas 98-284)
+    - Bloco duplicado (linhas 99-285)
+    ... e mais 23 problemas
+
+📄 user_service\schemas\payment.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 68-248)
+    - Bloco duplicado (linhas 69-249)
+    - Bloco duplicado (linhas 70-249)
+    ... e mais 5 problemas
+
+📄 user_service\schemas\plan.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 26-160)
+    - Bloco duplicado (linhas 56-189)
+    - Bloco duplicado (linhas 57-190)
+    ... e mais 7 problemas
+
+📄 user_service\schemas\subscription.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 117-236)
+    - Bloco duplicado (linhas 118-236)
+    - Bloco duplicado (linhas 119-237)
+    ... e mais 3 problemas
+
+📄 user_service\schemas\user.py:
+  🔸 Duplicate Methods:
+    - def validate_phone(cls, v): (linhas 155, 353)
+    - def validate_birth_date(cls, v): (linhas 176, 359)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 45-299)
+    - Bloco duplicado (linhas 118-315)
+    - Bloco duplicado (linhas 119-316)
+    ... e mais 9 problemas
+
+📄 user_service\schemas\__init__.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 397-410)
+
+📄 user_service\services\auth_service.py:
+  🔸 Duplicate Imports:
+    - from datetime import datetime, timedelta (linhas 10, 504)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 171-197)
+    - Bloco duplicado (linhas 179-205)
+    - Bloco duplicado (linhas 180-206)
+    ... e mais 7 problemas
+
+📄 user_service\services\email_service.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 70-211)
+    - Bloco duplicado (linhas 71-212)
+    - Bloco duplicado (linhas 72-213)
+    ... e mais 43 problemas
+
+📄 user_service\services\security_service.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 149-175)
+    - Bloco duplicado (linhas 150-175)
+    - Bloco duplicado (linhas 179-204)
+    ... e mais 26 problemas
+
+📄 user_service\services\user_service.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 203-542)
+    - Bloco duplicado (linhas 204-543)
+    - Bloco duplicado (linhas 205-544)
+    ... e mais 7 problemas
+
+📄 user_service\services\viacep_service.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 95-150)
+    - Bloco duplicado (linhas 96-151)
+    - Bloco duplicado (linhas 97-152)
+    ... e mais 10 problemas
+
+📄 user_service\utils\age_validator.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 56-139)
+    - Bloco duplicado (linhas 172-185)
+
+📄 user_service\utils\cpf_validator.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 87-123)
+    - Bloco duplicado (linhas 168-182)
+
+📄 user_service\utils\validators.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 40-85)
+    - Bloco duplicado (linhas 50-96)
+    - Bloco duplicado (linhas 135-290)
+
+📄 utils\code_integrity_checker.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 89-126)
+    - Bloco duplicado (linhas 90-127)
+    - Bloco duplicado (linhas 91-128)
+    ... e mais 1 problemas
+
+📄 utils\improved_code_integrity_checker.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 71-146)
+    - Bloco duplicado (linhas 72-147)
+    - Bloco duplicado (linhas 73-148)
+    ... e mais 16 problemas
+
+📄 video_converter_module\core\queue_manager.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 1538-1574)
+    - Bloco duplicado (linhas 1539-1575)
+    - Bloco duplicado (linhas 1540-1576)
+
+📄 video_converter_module\core\video_converter.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 325-430)
+    - Bloco duplicado (linhas 430-546)
+    - Bloco duplicado (linhas 659-819)
+    ... e mais 10 problemas
+
+📄 video_converter_module\tests\test_all_formats.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 269-298)
+    - Bloco duplicado (linhas 270-299)
+    - Bloco duplicado (linhas 271-300)
+
+📄 video_converter_module\tests\test_audio_extraction.py:
+  🔸 Duplicate Methods:
+    - def setUp(self): (linhas 38, 340)
+    - def setUp(self): (linhas 38, 373)
+    - def tearDown(self): (linhas 54, 380)
+  🔸 Duplicate Imports:
+    - import shutil (linhas 58, 384)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 57-383)
+    - Bloco duplicado (linhas 74-143)
+    - Bloco duplicado (linhas 75-113)
+    ... e mais 18 problemas
+
+📄 video_converter_module\tests\test_button_state_validation.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 136-188)
+    - Bloco duplicado (linhas 137-189)
+    - Bloco duplicado (linhas 138-190)
+    ... e mais 9 problemas
+
+📄 video_converter_module\tests\test_codec_selector.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 34-46)
+
+📄 video_converter_module\tests\test_gif_fix.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 74-137)
+    - Bloco duplicado (linhas 75-138)
+    - Bloco duplicado (linhas 76-139)
+    ... e mais 11 problemas
+
+📄 video_converter_module\tests\test_hd_thermal_monitoring.py:
+  🔸 Duplicate Methods:
+    - def setUp(self): (linhas 26, 224)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 24-222)
+    - Bloco duplicado (linhas 25-223)
+
+📄 video_converter_module\utils\adaptive_config_engine.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 305-320)
+
+📄 video_converter_module\utils\config.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 117-128)
+    - Bloco duplicado (linhas 127-138)
+    - Bloco duplicado (linhas 128-139)
+    ... e mais 5 problemas
+
+📄 video_converter_module\utils\dynamic_monitor.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 461-480)
+
+📄 video_converter_module\utils\hardware_detector.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 65-141)
+    - Bloco duplicado (linhas 66-142)
+    - Bloco duplicado (linhas 99-184)
+    ... e mais 4 problemas
+
+📄 video_converter_module\utils\hardware_integration.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 195-234)
+    - Bloco duplicado (linhas 234-250)
+    - Bloco duplicado (linhas 235-251)
+    ... e mais 5 problemas
+
+📄 video_converter_module\utils\hd_thermal_detector.py:
+  🔸 Duplicate Imports:
+    - import re (linhas 138, 322)
+    - import sys (linhas 14, 598)
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 128-428)
+    - Bloco duplicado (linhas 129-429)
+    - Bloco duplicado (linhas 154-225)
+    ... e mais 3 problemas
+
+📄 video_converter_module\utils\universal_hardware_profiler.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 362-388)
+
+📄 video_converter_module\utils\updater.py:
+  🔸 Duplicate Blocks:
+    - Bloco duplicado (linhas 142-161)
+    - Bloco duplicado (linhas 337-360)
+    - Bloco duplicado (linhas 360-379)
+
+============================================================

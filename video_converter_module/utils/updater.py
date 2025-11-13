@@ -43,6 +43,7 @@ class UpdateChecker:
         self.check_interval = UPDATE_CHECK_INTERVAL
         self.is_checking = False
         self.periodic_thread = None
+        self._stop_periodic = False  # FLAG DE CONTROLE PARA PARAR O LOOP
         
     def get_latest_release_info(self) -> Optional[Dict[str, Any]]:
         """
@@ -227,10 +228,20 @@ class UpdateChecker:
         if self.periodic_thread and self.periodic_thread.is_alive():
             return
             
+        # RESETAR FLAG DE PARADA
+        self._stop_periodic = False
+            
         def periodic_check():
-            while True:
-                time.sleep(self.check_interval)
-                self.check_for_updates()
+            # CORREÇÃO CRÍTICA: Loop com condição de parada para evitar superaquecimento
+            while not self._stop_periodic:
+                try:
+                    time.sleep(self.check_interval)
+                    if not self._stop_periodic:  # Verificar novamente após o sleep
+                        self.check_for_updates()
+                except Exception as e:
+                    print(f"Erro na verificação periódica: {e}")
+                    # Em caso de erro, aguardar mais tempo antes de tentar novamente
+                    time.sleep(60)  # 1 minuto de pausa em caso de erro
         
         self.periodic_thread = threading.Thread(target=periodic_check, daemon=True)
         self.periodic_thread.start()
@@ -239,8 +250,14 @@ class UpdateChecker:
         """
         Para a verificação periódica de atualizações
         """
+        # CORREÇÃO: Usar flag para parar o loop de forma segura
+        self._stop_periodic = True
+        
         if self.periodic_thread and self.periodic_thread.is_alive():
-            # Como é uma thread daemon, ela será finalizada automaticamente
+            # Aguardar a thread terminar graciosamente (máximo 5 segundos)
+            self.periodic_thread.join(timeout=5.0)
+            if self.periodic_thread.is_alive():
+                print("AVISO: Thread de verificação periódica não terminou no tempo esperado")
             self.periodic_thread = None
 
 
